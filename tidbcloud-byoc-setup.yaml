@@ -14,6 +14,10 @@ Parameters:
     Type: String
     Description: "The ARN of the ACM Private CA to be used by cert-manager"
     Default: "arn:aws:acm-pca:us-west-2:227896186585:certificate-authority/4d4bd82b-069c-4d49-891c-5daaf8f52820"
+  ClinicAccountId:
+    Type: String
+    Description: "TiDB Cloud Clinic Account AWS Principal"
+    Default: "552185537300"
 Resources:
   # Create an eks service role
   TiDBCloudEKSServiceRole:
@@ -475,3 +479,32 @@ Resources:
                 Action:
                   - route53:GetChange
                 Resource: arn:aws:route53:::change/*
+  TiDBCloudSliRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tidbcloud-sli-assumed-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${ClinicAccountId}:root
+            Action: sts:AssumeRole
+            Condition:
+              StringLike:
+                aws:PrincipalArn:
+                  - !Sub arn:aws:iam::${ClinicAccountId}:role/*-dataplane-manager
+      Policies:
+        - PolicyName: sli-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3ReadOnlyAccess
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetBucket*
+                  - s3:GetObject
+                Resource:
+                  - arn:aws:s3:::tidbcloud-sli-data*
+                  - arn:aws:s3:::tidbcloud-sli-data*/*
