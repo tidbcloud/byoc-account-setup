@@ -14,13 +14,11 @@ Parameters:
     Type: String
     Description: "The ARN of the ACM Private CA to be used by cert-manager"
     Default: "arn:aws:acm-pca:us-west-2:227896186585:certificate-authority/4d4bd82b-069c-4d49-891c-5daaf8f52820"
-<<<<<<< HEAD
   # Clinic account id
   ClinicAccountId:
     Type: String
     Description: "TiDB Cloud Clinic Account AWS Principal"
     Default: "552185537300"
-=======
   GithubRunnerGoogleAccountId:
     Type: String
     Description: "The Google Account ID of the GitHub runner for PingCAP"
@@ -29,7 +27,7 @@ Parameters:
     Type: String
     Description: "The Route 53 hosted zone ID to manage DNS records"
     Default: "Z06682812CVJ47GSWA32H"
->>>>>>> a5db444 (fix: static auto deploy role)
+    Description: "The Route 53 hosted zone ID to manage DNS records for o11y"
 Resources:
   # Create an eks service role
   TiDBCloudEKSServiceRole:
