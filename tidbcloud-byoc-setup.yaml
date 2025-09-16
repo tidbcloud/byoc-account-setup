@@ -14,11 +14,22 @@ Parameters:
     Type: String
     Description: "The ARN of the ACM Private CA to be used by cert-manager"
     Default: "arn:aws:acm-pca:us-west-2:227896186585:certificate-authority/4d4bd82b-069c-4d49-891c-5daaf8f52820"
+<<<<<<< HEAD
   # Clinic account id
   ClinicAccountId:
     Type: String
     Description: "TiDB Cloud Clinic Account AWS Principal"
     Default: "552185537300"
+=======
+  GithubRunnerGoogleAccountId:
+    Type: String
+    Description: "The Google Account ID of the GitHub runner for PingCAP"
+    Default: "114667344163696279999"
+  O11yHostedZoneId:
+    Type: String
+    Description: "The Route 53 hosted zone ID to manage DNS records"
+    Default: "Z06682812CVJ47GSWA32H"
+>>>>>>> a5db444 (fix: static auto deploy role)
 Resources:
   # Create an eks service role
   TiDBCloudEKSServiceRole:
@@ -563,3 +574,348 @@ Resources:
                   - arn:aws:glue:*:*:catalog
                   - arn:aws:glue:*:*:database/tidbcloud-sli*
                   - arn:aws:glue:*:*:table/tidbcloud-sli*/*
+  TiDBCloudSyncImageRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: auto-deploy-sync-image
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: "accounts.google.com"
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                accounts.google.com:aud: !Sub ${GithubRunnerGoogleAccountId}
+    Policies:
+      - PolicyName: auto-deploy-sync-image-policy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Action:
+                - ecr:GetAuthorizationToken
+              Effect: Allow
+              Resource:
+                - '*'
+              Sid: GetToken
+            - Action:
+                - ecr:DescribeRepositories
+              Effect: Allow
+              Resource:
+                - '*'
+              Sid: CheckRepository
+            - Action:
+                - ecr:CreateRepository
+                - ecr:TagResource
+              Condition:
+                ForAllValues:StringEquals:
+                  aws:TagKeys:
+                    - ManagedBy
+                StringEquals:
+                  aws:RequestTag/ManagedBy: PingCAP
+              Effect: Allow
+              Resource:
+                - '*'
+              Sid: CreateRepository
+            - Action:
+                - ecr:BatchCheckLayerAvailability
+                - ecr:BatchGetImage
+                - ecr:InitiateLayerUpload
+                - ecr:UploadLayerPart
+                - ecr:CompleteLayerUpload
+                - ecr:PutImage
+              Condition:
+                StringEquals:
+                  aws:ResourceTag/ManagedBy: PingCAP
+              Effect: Allow
+              Resource:
+                - '*'
+              Sid: PushImage
+  TiDBCloudAutoDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: auto-deploy-cli
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::${ControlPlaneAccountId}:role/auto-deploy-cli
+            Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              Federated: "accounts.google.com"
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                accounts.google.com:aud: !Sub ${GithubRunnerGoogleAccountId}
+      Policies:
+        - PolicyName: auto-deploy-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Requested by o11y iam
+              - Action:
+                  - iam:GetRole
+                  - iam:UpdateAssumeRolePolicy
+                Effect: Allow
+                Resource: arn:aws:iam::*:role/tidbcloud-o11y-controlplane-role
+                Sid: UpdateO11yControlPlaneRole
+              # Requested by o11y
+              - Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:ListStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResource
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:GetTemplate
+                  - cloudformation:ValidateTemplate
+                  - cloudformation:GetTemplateSummary
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ListChangeSets
+                Effect: Allow
+                Resource: "*"
+                Sid: CloudFormationReadOnly
+              # Requested by o11y
+              - Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:TagResource
+                  - cloudformation:UntagResource
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DeleteChangeSet
+                Effect: Allow
+                Resource: arn:aws:cloudformation:*:*:stack/auto-deploy-o11y-*/*
+                Sid: CloudFormationWrite
+              # Requested by o11y eks
+              - Action:
+                  - ec2:RunInstances
+                  - ec2:TerminateInstances
+                  - ec2:CreateVpc
+                  - ec2:DeleteVpc
+                  - ec2:ModifyVpcAttribute
+                  - ec2:CreateSubnet
+                  - ec2:DeleteSubnet
+                  - ec2:ModifySubnetAttribute
+                  - ec2:CreateSecurityGroup
+                  - ec2:DeleteSecurityGroup
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:RevokeSecurityGroupIngress
+                  - ec2:AuthorizeSecurityGroupEgress
+                  - ec2:RevokeSecurityGroupEgress
+                  - ec2:CreateRouteTable
+                  - ec2:DeleteRouteTable
+                  - ec2:AssociateRouteTable
+                  - ec2:DisassociateRouteTable
+                  - ec2:CreateRoute
+                  - ec2:DeleteRoute
+                  - ec2:CreateInternetGateway
+                  - ec2:DeleteInternetGateway
+                  - ec2:AttachInternetGateway
+                  - ec2:DetachInternetGateway
+                  - ec2:AllocateAddress
+                  - ec2:ReleaseAddress
+                  - ec2:DisassociateAddress
+                  - ec2:CreateNatGateway
+                  - ec2:DeleteNatGateway
+                  - ec2:CreateLaunchTemplate
+                  - ec2:DeleteLaunchTemplate
+                  - ec2:CreateLaunchTemplateVersion
+                  - ec2:DeleteLaunchTemplateVersions
+                  - ec2:ModifyLaunchTemplate
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                  - ec2:CreateNetworkAclEntry
+                  - ec2:DeleteNetworkAclEntry
+                  - ec2:CreateVpcEndpoint
+                  - ec2:DeleteVpcEndpoints
+                  - ec2:ModifyVpcEndpoint
+                  - ec2:CreateVpcEndpointServiceConfiguration
+                  - ec2:DeleteVpcEndpointServiceConfigurations
+                  - ec2:ModifyVpcEndpointServiceConfiguration
+                  - ec2:ModifyVpcEndpointServicePermissions
+                Effect: Allow
+                Resource: "*"
+                Sid: "EC2Write"
+              # Requested by o11y eks
+              - Action:
+                  - ec2:Describe*
+                Effect: Allow
+                Resource: '*'
+                Sid: "EC2ReadOnly"
+              # Requested by o11y eks
+              - Action:
+                  - autoscaling:AttachInstances
+                  - autoscaling:DetachInstances
+                  - autoscaling:CreateAutoScalingGroup
+                  - autoscaling:DeleteAutoScalingGroup
+                  - autoscaling:UpdateAutoScalingGroup
+                  - autoscaling:TerminateInstanceInAutoScalingGroup
+                Effect: Allow
+                Resource:
+                  - "arn:aws:autoscaling:*:*:autoScalingGroup:*:autoScalingGroupName/eks-worker-*"
+                  - "arn:aws:ec2:*:*:instance/*"
+                Sid: "ASGWriteWithPrefix"
+              # Requested by o11y eks
+              - Action:
+                  - autoscaling:DescribeAutoScalingGroups
+                Effect: Allow
+                Resource: '*'
+                Sid: "ASGReadOnly"
+              # Requested by o11y eks
+              - Action:
+                  - eks:CreateAddon
+                  - eks:DeleteAddon
+                  - eks:UpdateAddon
+                  - eks:CreateCluster
+                  - eks:DeleteCluster
+                  - eks:UpdateClusterConfig
+                  - eks:UpdateClusterVersion
+                  - eks:AssociateIdentityProviderConfig
+                  - eks:DisassociateIdentityProviderConfig
+                  - eks:CreateNodegroup
+                  - eks:DeleteNodegroup
+                  - eks:UpdateNodegroupConfig
+                  - eks:CreateAccessEntry
+                  - eks:DeleteAccessEntry
+                  - eks:AssociateAccessPolicy
+                  - eks:DisassociateAccessPolicy
+                  - eks:TagResource
+                  - eks:UntagResource
+                Effect: Allow
+                Resource:
+                  - arn:aws:eks:*:*:cluster/o11y-*
+                  - arn:aws:eks:*:*:addon/o11y-*/*/*
+                  - arn:aws:eks:*:*:nodegroup/o11y-*/*/*
+                Sid: "EKSWrite"
+              # Requested by o11y eks
+              - Action:
+                  - eks:Describe*
+                  - eks:List*
+                Effect: Allow
+                Resource: '*'
+                Sid: "EKSReadOnly"
+              # Requested by o11y, sli, metering
+              - Action:
+                  - s3:CreateBucket
+                  - s3:PutBucketPolicy
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutLifecycleConfiguration
+                Effect: Allow
+                Resource:
+                  - arn:aws:s3:::tidbcloud-*
+                  - arn:aws:s3:::o11y-*
+                  - arn:aws:s3:::loki-*
+                Sid: "S3Write"
+              # Requested by o11y, sli, metering
+              - Action:
+                  - s3:ListBucket
+                  - s3:GetLifecycleConfiguration
+                Effect: Allow
+                Resource: "*"
+                Sid: "S3ReadOnly"
+              # Requested by o11y
+              - Action:
+                  - route53:ChangeResourceRecordSets
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:route53:::hostedzone/${O11yHostedZoneId}
+                Sid: "Route53Write"
+              - Action:
+                  - route53:GetHostedZone
+                  - route53:ListHostedZones
+                  - route53:ListHostedZonesByName
+                  - route53:ListResourceRecordSets
+                Effect: Allow
+                Resource: '*'
+                Sid: "Route53ReadOnly"
+              # Requested by o11y
+              - Action:
+                  - cloudwatch:PutMetricAlarm
+                Effect: Allow
+                Resource:
+                  - arn:aws:cloudwatch:us-west-2:*:alarm:WatchdogDown-*
+                  - arn:aws:cloudwatch:us-west-2:*:alarm:AlertmanagerClusterFailedToSendAlerts-*
+                Sid: "CloudWatchWrite"
+              # Requested by o11y
+              - Action:
+                  - acm:RequestCertificate
+                  - acm:RevokeCertificate
+                  - acm:DeleteCertificate
+                  - acm:AddTagsToCertificate
+                Effect: Allow
+                Resource: '*'
+                Sid: "ACMWrite"
+              # Requested by o11y
+              - Action:
+                  - acm:DescribeCertificate
+                Effect: Allow
+                Resource: '*'
+                Sid: "ACMReadOnly"
+              # Requested by o11y
+              - Action:
+                  - wafv2:CreateIPSet
+                  - wafv2:DeleteIPSet
+                  - wafv2:UpdateIPSet
+                  - wafv2:CreateWebACL
+                  - wafv2:DeleteWebACL
+                  - wafv2:UpdateWebACL
+                  - wafv2:AssociateWebACL
+                  - wafv2:TagResource
+                  - wafv2:UntagResource
+                Effect: Allow
+                Resource: '*'
+                Sid: "WAFWrite"
+              # Requested by o11y
+              - Action:
+                  - wafv2:GetIPSet
+                  - wafv2:GetWebACL
+                  - wafv2:ListTagsForResource
+                Effect: Allow
+                Resource: '*'
+                Sid: "WAFReadOnly"
+              # Requested by sli, o11y
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:PutRetentionPolicy
+                  - logs:CreateLogStream
+                Effect: Allow
+                Resource:
+                  - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster:*
+                  - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*:*
+                Sid: "losWrite"
+              # Requested by sli
+              - Action:
+                  - glue:CreateDatabase
+                  - glue:CreateTable
+                Effect: Allow
+                Resource:
+                  - arn:aws:glue:*:*:database/tidbcloud-*
+                  - arn:aws:glue:*:*:table/tidbcloud-*
+              # Requested by sli
+              - Action:
+                  - firehose:CreateDeliveryStream
+                Effect: Allow
+                Resource:
+                  - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
+              # Requested by sli
+              - Action:
+                  - firehose:DescribeDeliveryStream
+                Effect: Allow
+                Resource:
+                  - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
+              - Action:
+                  - iam:PassRole
+                Effect: Allow
+                Resource:
+                  - arn:aws:iam::*:role/tidbcloud-*
+              - Action:
+                  - route53-recovery-control-config:ListControlPanels
+                  - route53domains:ListDomains
+                  - route53domains:ListOperations
+                  - route53-recovery-readiness:ListReadinessChecks
+                Effect: Allow
+                Resource: '*'
