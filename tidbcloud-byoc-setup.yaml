@@ -14,6 +14,7 @@ Parameters:
     Type: String
     Description: "The ARN of the ACM Private CA to be used by cert-manager"
     Default: "arn:aws:acm-pca:us-west-2:227896186585:certificate-authority/4d4bd82b-069c-4d49-891c-5daaf8f52820"
+  # Clinic account id
   ClinicAccountId:
     Type: String
     Description: "TiDB Cloud Clinic Account AWS Principal"
@@ -288,6 +289,15 @@ Resources:
                 Action:
                   - sts:AssumeRole
                 Resource: "*"  
+        - PolicyName: AllowSliReporter
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - firehose:PutRecord
+                Resource: 
+                  - arn:aws:firehose:*:*:deliverystream/tidbcloud-sli*
   # Create instance profile for EKS node role
   TiDBCloudEKSNodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -508,3 +518,48 @@ Resources:
                 Resource:
                   - arn:aws:s3:::tidbcloud-sli-data*
                   - arn:aws:s3:::tidbcloud-sli-data*/*
+  TiDBCloudSliFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tidbcloud-sli-firehose-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: sli-firehose-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3Access
+                Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:PutObject
+                Resource:
+                  - arn:aws:s3:::tidbcloud-sli-data*
+                  - arn:aws:s3:::tidbcloud-sli-data*/*
+              - Sid: CloudWatchLogsAccess
+                Effect: Allow
+                Action:
+                  - logs:PutLogEvents
+                  - logs:CreateLogStream
+                  - logs:CreateLogGroup
+                Resource: arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-sli*:*
+              - Sid: GlueAccess
+                Effect: Allow
+                Action:
+                  - glue:GetTable
+                  - glue:GetTableVersion
+                  - glue:GetTableVersions
+                Resource:
+                  - arn:aws:glue:*:*:catalog
+                  - arn:aws:glue:*:*:database/tidbcloud-sli*
+                  - arn:aws:glue:*:*:table/tidbcloud-sli*/*
