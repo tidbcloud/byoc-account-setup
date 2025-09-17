@@ -917,7 +917,7 @@ Resources:
                   - route53domains:ListOperations
                   - route53-recovery-readiness:ListReadinessChecks
                 Effect: Allow
-                Resource: '*'
+                Resource: "*"
   TiDBCloudO11yControlPlaneRole:
     Type: AWS::IAM::Role
     Properties:
