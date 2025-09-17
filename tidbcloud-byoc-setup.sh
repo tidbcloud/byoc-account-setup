@@ -22,7 +22,7 @@ aws cloudformation deploy \
                ParameterKey=PCAArn,ParameterValue=$TidbPCAArn \
                ParameterKey=ClinicAccountId,ParameterValue=$ClinicAccountId \
                ParameterKey=GithubRunnerGoogleAccountId,ParameterValue=$GithubRunnerGoogleAccountId \
-               ParameterKey=O11yHostedZoneId,ParameterValue=Z0445973180UDOPUM7N9G \
+               ParameterKey=O11yHostedZoneId,ParameterValue=$O11yHostedZoneId \
   --capabilities CAPABILITY_NAMED_IAM
 
 aws cloudformation deploy \
