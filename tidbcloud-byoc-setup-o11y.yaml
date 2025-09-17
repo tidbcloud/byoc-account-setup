@@ -1,3 +1,4 @@
+Description: Create IAM roles for tidbcloud o11y
 Parameters:
   O11yHostedZoneId:
     Type: String
