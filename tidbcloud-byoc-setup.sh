@@ -1,4 +1,7 @@
 
+#!/usr/bin/env bash
+set -euo pipefail
+
 ControlPlaneAccountId=$1
 ClinicAccountId=$2
 TidbHostedZoneId=$3
