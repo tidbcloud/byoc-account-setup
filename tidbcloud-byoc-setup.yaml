@@ -657,7 +657,8 @@ Resources:
                   - iam:GetRole
                   - iam:UpdateAssumeRolePolicy
                 Effect: Allow
-                Resource: arn:aws:iam::*:role/tidbcloud-o11y-controlplane-role
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-controlplane-role
                 Sid: UpdateO11yControlPlaneRole
               # Requested by o11y
               - Action:
@@ -908,7 +909,8 @@ Resources:
                   - iam:PassRole
                 Effect: Allow
                 Resource:
-                  - arn:aws:iam::*:role/tidbcloud-*
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-*
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/auto-deploy-cli
               - Action:
                   - route53-recovery-control-config:ListControlPanels
                   - route53domains:ListDomains
