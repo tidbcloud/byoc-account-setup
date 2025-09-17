@@ -3,30 +3,28 @@ ControlPlaneAccountId=$1
 ClinicAccountId=$2
 TidbHostedZoneId=$3
 O11yHostedZoneId=$4
-TidbPCAArn=$4
-GithubRunnerGoogleAccountId=${5:-114667344163696279999}
+TidbPCAArn=$5
+GithubRunnerGoogleAccountId=${6:-114667344163696279999}
 
 aws cloudformation deploy \
   --stack-name tidbcloud-byoc-setup-deploy \
-  --template-body file://tidbcloud-byoc-setup-deploy.yaml \
-  --parameters ParameterKey=ControlPlaneAccountId,ParameterValue=$ControlPlaneAccountId \
-               ParameterKey=GithubRunnerGoogleAccountId,ParameterValue=$GithubRunnerGoogleAccountId \
-               ParameterKey=O11yHostedZoneId,ParameterValue=$O11yHostedZoneId \
+  --template-file ./tidbcloud-byoc-setup-deploy.yaml \
+  --parameter-overrides ControlPlaneAccountId=$ControlPlaneAccountId \
+               GithubRunnerGoogleAccountId=$GithubRunnerGoogleAccountId \
+               O11yHostedZoneId=$O11yHostedZoneId \
   --capabilities CAPABILITY_NAMED_IAM
 
 aws cloudformation deploy \
   --stack-name tidbcloud-byoc-setup-dataplane \
-  --template-body file://tidbcloud-byoc-setup-dataplane.yaml \
-  --parameters ParameterKey=ControlPlaneAccountId,ParameterValue=$ControlPlaneAccountId \
-               ParameterKey=HostedZoneId,ParameterValue=$TidbHostedZoneId \
-               ParameterKey=PCAArn,ParameterValue=$TidbPCAArn \
-               ParameterKey=ClinicAccountId,ParameterValue=$ClinicAccountId \
-               ParameterKey=GithubRunnerGoogleAccountId,ParameterValue=$GithubRunnerGoogleAccountId \
-               ParameterKey=O11yHostedZoneId,ParameterValue=$O11yHostedZoneId \
+  --template-file ./tidbcloud-byoc-setup-dataplane.yaml \
+  --parameter-overrides ControlPlaneAccountId=$ControlPlaneAccountId \
+               HostedZoneId=$TidbHostedZoneId \
+               PCAArn=$TidbPCAArn \
+               ClinicAccountId=$ClinicAccountId \
   --capabilities CAPABILITY_NAMED_IAM
 
 aws cloudformation deploy \
   --stack-name tidbcloud-byoc-setup-o11y \
-  --template-body file://tidbcloud-byoc-setup-o11y.yaml \
-  --parameters ParameterKey=O11yHostedZoneId,ParameterValue=$O11yHostedZoneId \
+  --template-file ./tidbcloud-byoc-setup-o11y.yaml \
+  --parameter-overrides O11yHostedZoneId=$O11yHostedZoneId \
   --capabilities CAPABILITY_NAMED_IAM
