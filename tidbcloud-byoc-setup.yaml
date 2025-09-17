@@ -296,7 +296,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - sts:AssumeRole
-                Resource: "*"  
+                Resource: "*"
         - PolicyName: AllowSliReporter
           PolicyDocument:
             Version: "2012-10-17"
@@ -304,7 +304,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - firehose:PutRecord
-                Resource: 
+                Resource:
                   - arn:aws:firehose:*:*:deliverystream/tidbcloud-sli*
   # Create instance profile for EKS node role
   TiDBCloudEKSNodeInstanceProfile:
@@ -916,3 +916,297 @@ Resources:
                   - route53-recovery-readiness:ListReadinessChecks
                 Effect: Allow
                 Resource: '*'
+  TiDBCloudO11yControlPlaneRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tidbcloud-o11y-control-plane-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              # placeholder, will be replaced after eks creation
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: O11yControlPlanePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeVpcEndpointServices
+                  - ec2:DescribeVpcEndpointServicePermissions
+                  - ec2:DescribeVpcEndpointServiceConfigurations
+                  - ec2:CreateVpcEndpointServiceConfiguration
+                  - ec2:ModifyVpcEndpointServicePermissions
+                  - ec2:ModifyVpcEndpointServiceConfiguration
+                  - ec2:DeleteVpcEndpointServiceConfigurations
+                  - s3:CreateBucket
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:GetLifecycleConfiguration
+                  - s3:PutLifecycleConfiguration
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                  - s3:ListBucket
+                  - sts:AssumeRole
+                  - sts:GetCallerIdentity
+                Effect: Allow
+                Resource: "*"
+        - PolicyName: ExternalDNSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - route53:ChangeResourceRecordSets
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:route53:::hostedzone/${O11yHostedZoneId}
+              - Effect: Allow
+                Action:
+                  - route53:ListHostedZones
+                  - route53:ListResourceRecordSets
+                  - route53:ListTagsForResources
+                Resource:
+                  - "*"
+        - PolicyName: AWSLoadBalancerPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - cognito-idp:DescribeUserPoolClient
+                  - acm:ListCertificates
+                  - acm:DescribeCertificate
+                  - waf-regional:GetWebACL
+                  - waf-regional:GetWebACLForResource
+                  - waf-regional:AssociateWebACL
+                  - waf-regional:DisassociateWebACL
+                  - wafv2:GetWebACL
+                  - wafv2:GetWebACLForResource
+                  - wafv2:AssociateWebACL
+                  - wafv2:DisassociateWebACL
+                  - shield:GetSubscriptionState
+                  - shield:DescribeProtection
+                  - shield:CreateProtection
+                  - shield:DeleteProtection
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - iam:CreateServiceLinkedRole
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName: elasticloadbalancing.amazonaws.com
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - ec2:DescribeAccountAttributes
+                  - ec2:DescribeAddresses
+                  - ec2:DescribeAvailabilityZones
+                  - ec2:DescribeInternetGateways
+                  - ec2:DescribeVpcs
+                  - ec2:DescribeVpcPeeringConnections
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeSecurityGroups
+                  - ec2:DescribeInstances
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeTags
+                  - ec2:GetCoipPoolUsage
+                  - ec2:DescribeCoipPools
+                  - elasticloadbalancing:DescribeLoadBalancers
+                  - elasticloadbalancing:DescribeLoadBalancerAttributes
+                  - elasticloadbalancing:DescribeListeners
+                  - elasticloadbalancing:DescribeListenerCertificates
+                  - elasticloadbalancing:DescribeSSLPolicies
+                  - elasticloadbalancing:DescribeRules
+                  - elasticloadbalancing:DescribeTargetGroups
+                  - elasticloadbalancing:DescribeTargetGroupAttributes
+                  - elasticloadbalancing:DescribeTargetHealth
+                  - elasticloadbalancing:DescribeTags
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:RevokeSecurityGroupIngress
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - ec2:CreateSecurityGroup
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - ec2:CreateTags
+                Condition:
+                  "Null":
+                    aws:RequestTag/elbv2.k8s.aws/cluster: "false"
+                  StringEquals:
+                    ec2:CreateAction: CreateSecurityGroup
+                Effect: Allow
+                Resource: arn:aws:ec2:*:*:security-group/*
+              - Action:
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                Condition:
+                  "Null":
+                    aws:RequestTag/elbv2.k8s.aws/cluster: "true"
+                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
+                Effect: Allow
+                Resource: arn:aws:ec2:*:*:security-group/*
+              - Action:
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:RevokeSecurityGroupIngress
+                  - ec2:DeleteSecurityGroup
+                Condition:
+                  "Null":
+                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - elasticloadbalancing:CreateLoadBalancer
+                  - elasticloadbalancing:CreateTargetGroup
+                Condition:
+                  "Null":
+                    aws:RequestTag/elbv2.k8s.aws/cluster: "false"
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - elasticloadbalancing:CreateListener
+                  - elasticloadbalancing:DeleteListener
+                  - elasticloadbalancing:CreateRule
+                  - elasticloadbalancing:DeleteRule
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - elasticloadbalancing:AddTags
+                  - elasticloadbalancing:RemoveTags
+                Effect: Allow
+                Resource:
+                  - arn:aws:elasticloadbalancing:*:*:targetgroup/*/*
+                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*
+                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*
+              - Action:
+                  - elasticloadbalancing:AddTags
+                  - elasticloadbalancing:RemoveTags
+                Effect: Allow
+                Resource:
+                  - arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*
+                  - arn:aws:elasticloadbalancing:*:*:listener/app/*/*/*
+                  - arn:aws:elasticloadbalancing:*:*:listener-rule/net/*/*/*
+                  - arn:aws:elasticloadbalancing:*:*:listener-rule/app/*/*/*
+              - Action:
+                  - elasticloadbalancing:ModifyLoadBalancerAttributes
+                  - elasticloadbalancing:SetIpAddressType
+                  - elasticloadbalancing:SetSecurityGroups
+                  - elasticloadbalancing:SetSubnets
+                  - elasticloadbalancing:DeleteLoadBalancer
+                  - elasticloadbalancing:ModifyTargetGroup
+                  - elasticloadbalancing:ModifyTargetGroupAttributes
+                  - elasticloadbalancing:DeleteTargetGroup
+                Condition:
+                  "Null":
+                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - elasticloadbalancing:RegisterTargets
+                  - elasticloadbalancing:DeregisterTargets
+                Effect: Allow
+                Resource: arn:aws:elasticloadbalancing:*:*:targetgroup/*/*
+              - Action:
+                  - elasticloadbalancing:SetWebAcl
+                  - elasticloadbalancing:ModifyListener
+                  - elasticloadbalancing:AddListenerCertificates
+                  - elasticloadbalancing:RemoveListenerCertificates
+                  - elasticloadbalancing:ModifyRule
+                Effect: Allow
+                Resource: "*"
+        - PolicyName: ClusterAutoscalerPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - autoscaling:DescribeAutoScalingGroups
+                  - autoscaling:DescribeAutoScalingInstances
+                  - autoscaling:DescribeLaunchConfigurations
+                  - autoscaling:DescribeTags
+                  - autoscaling:SetDesiredCapacity
+                  - autoscaling:TerminateInstanceInAutoScalingGroup
+                  - ec2:DescribeLaunchTemplateVersions
+                Effect: Allow
+                Resource: "*"
+        - PolicyName: EKSClusterBackupPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeSnapshots
+                  - ec2:CreateTags
+                  - ec2:CreateVolume
+                  - ec2:CreateSnapshot
+                  - ec2:DeleteSnapshot
+                Resource: "*"
+        - PolicyName: DeadmanswitchPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource:
+                  - "*"
+  TiDBCloudO11yDataPlaneAgentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "tidbcloud-o11y-agent-role"
+      # inline policies for access s3 by o11y agent
+      Policies:
+        - PolicyName: AllowS3Access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: "arn:aws:s3:::o11y*"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-eks-node-role
+  TiDBCloudO11yEKSClusterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tidbcloud-o11y-eks-cluster-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: eks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+  TiDBCloudO11yEKSNodeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tidbcloud-o11y-eks-node-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
