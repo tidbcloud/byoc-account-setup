@@ -588,19 +588,19 @@ Resources:
     Policies:
       - PolicyName: auto-deploy-sync-image-policy
         PolicyDocument:
-          Version: '2012-10-17'
+          Version: "2012-10-17"
           Statement:
             - Action:
                 - ecr:GetAuthorizationToken
               Effect: Allow
               Resource:
-                - '*'
+                - "*"
               Sid: GetToken
             - Action:
                 - ecr:DescribeRepositories
               Effect: Allow
               Resource:
-                - '*'
+                - "*"
               Sid: CheckRepository
             - Action:
                 - ecr:CreateRepository
@@ -613,7 +613,7 @@ Resources:
                   aws:RequestTag/ManagedBy: PingCAP
               Effect: Allow
               Resource:
-                - '*'
+                - "*"
               Sid: CreateRepository
             - Action:
                 - ecr:BatchCheckLayerAvailability
@@ -627,7 +627,7 @@ Resources:
                   aws:ResourceTag/ManagedBy: PingCAP
               Effect: Allow
               Resource:
-                - '*'
+                - "*"
               Sid: PushImage
   TiDBCloudAutoDeployRole:
     Type: AWS::IAM::Role
@@ -741,7 +741,7 @@ Resources:
               - Action:
                   - ec2:Describe*
                 Effect: Allow
-                Resource: '*'
+                Resource: "*"
                 Sid: "EC2ReadOnly"
               # Requested by o11y eks
               - Action:
@@ -760,7 +760,7 @@ Resources:
               - Action:
                   - autoscaling:DescribeAutoScalingGroups
                 Effect: Allow
-                Resource: '*'
+                Resource: "*"
                 Sid: "ASGReadOnly"
               # Requested by o11y eks
               - Action:
@@ -793,7 +793,7 @@ Resources:
                   - eks:Describe*
                   - eks:List*
                 Effect: Allow
-                Resource: '*'
+                Resource: "*"
                 Sid: "EKSReadOnly"
               # Requested by o11y, sli, metering
               - Action:
@@ -827,7 +827,7 @@ Resources:
                   - route53:ListHostedZonesByName
                   - route53:ListResourceRecordSets
                 Effect: Allow
-                Resource: '*'
+                Resource: "*"
                 Sid: "Route53ReadOnly"
               # Requested by o11y
               - Action:
@@ -844,13 +844,13 @@ Resources:
                   - acm:DeleteCertificate
                   - acm:AddTagsToCertificate
                 Effect: Allow
-                Resource: '*'
+                Resource: "*"
                 Sid: "ACMWrite"
               # Requested by o11y
               - Action:
                   - acm:DescribeCertificate
                 Effect: Allow
-                Resource: '*'
+                Resource: "*"
                 Sid: "ACMReadOnly"
               # Requested by o11y
               - Action:
@@ -864,7 +864,7 @@ Resources:
                   - wafv2:TagResource
                   - wafv2:UntagResource
                 Effect: Allow
-                Resource: '*'
+                Resource: "*"
                 Sid: "WAFWrite"
               # Requested by o11y
               - Action:
@@ -872,7 +872,7 @@ Resources:
                   - wafv2:GetWebACL
                   - wafv2:ListTagsForResource
                 Effect: Allow
-                Resource: '*'
+                Resource: "*"
                 Sid: "WAFReadOnly"
               # Requested by sli, o11y
               - Action:
@@ -1210,3 +1210,66 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+  TiDBCloudMeteringWriteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tidbclooud-metering-write-only-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-eks-node-role
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: metering-write-only-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - s3:GetBucketLocation
+                  - s3:AbortMultipartUpload
+                  - s3:ListBucketMultipartUploads
+                  - s3:ListMultipartUploadParts
+                  - s3:PutObject
+                Effect: Allow
+                Resource:
+                  - arn:aws:s3:::tidbcloud-metering-*
+                Sid: S3WriteWithPrefix
+  TiDBCloudMeteringReadWriteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tidbclooud-metering-read-write-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${ControlPlaneAccountId}:root
+            Action: sts:AssumeRole
+            Condition:
+              StringLike:
+                aws:PrincipalArn:
+                  - !Sub arn:aws:iam::${ControlPlaneAccountId}:role/*-dataplane-manager
+    Policies:
+      - PolicyName: auto-deploy-sync-image-policy
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Action:
+                - s3:AbortMultipartUpload
+                - s3:ListBucketMultipartUploads
+                - s3:ListMultipartUploadParts
+                - s3:PutObject
+              Effect: Allow
+              Resource:
+                - arn:aws:s3:::tidbcloud-metering-*
+              Sid: S3WriteWithPrefix
+            - Action:
+                - s3:GetBucket*
+                - s3:GetObject
+                - s3:ListObject
+              Effect: Allow
+              Resource:
+                - arn:aws:s3:::tidbcloud-metering-*
+              Sid: S3ReadWithPrefix
