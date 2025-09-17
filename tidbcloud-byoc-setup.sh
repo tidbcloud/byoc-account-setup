@@ -2,6 +2,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ $# -lt 5 ]]; then
+  echo "Usage: $0 <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> [GithubRunnerGoogleAccountId]"
+  exit 1
+fi
+
 ControlPlaneAccountId=$1
 ClinicAccountId=$2
 TidbHostedZoneId=$3
