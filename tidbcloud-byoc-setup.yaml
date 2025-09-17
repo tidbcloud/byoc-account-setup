@@ -25,7 +25,6 @@ Parameters:
     Default: "114667344163696279999"
   O11yHostedZoneId:
     Type: String
-    Description: "The Route 53 hosted zone ID to manage DNS records"
     Default: "Z06682812CVJ47GSWA32H"
     Description: "The Route 53 hosted zone ID to manage DNS records for o11y"
 Resources:
