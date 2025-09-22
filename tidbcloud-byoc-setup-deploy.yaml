@@ -104,11 +104,39 @@ Resources:
                 Sid: UpdateO11yControlPlaneRole
               # Requested by o11y eks
               - Action:
+                  - iam:CreateOpenIDConnectProvider
+                  - iam:DeleteOpenIDConnectProvider
+                  - iam:GetOpenIDConnectProvider
+                  - iam:ListOpenIDConnectProviders
+                  - iam:TagOpenIDConnectProvider
+                  - iam:UntagOpenIDConnectProvider
+                Effect: Allow
+                Resource: "*"
+                Sid: CreateOIDCProvider
+              # Requested by o11y eks
+              - Action:
                   - iam:GetRole
+                  - iam:PassRole
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/auto-deploy-cli
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-node-role
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-cluster-role
                 Sid: GetDeployRole
+              # Requested by o11y eks
+              - Action:
+                  - iam:GetRole
+                  - iam:CreateServiceLinkedRole
+                Effect: Allow
+                Resource:
+                  - arn:aws:iam::*:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup
+                Sid: EKSCreateServiceLinkedRole
+              # Requested by o11y
+              - Action:
+                  - elasticloadbalancing:DescribeLoadBalancers
+                Effect: Allow
+                Resource: "*"
+                Sid: ELBRead
               # Requested by o11y
               - Action:
                   - cloudformation:DescribeStacks
@@ -361,12 +389,6 @@ Resources:
                 Effect: Allow
                 Resource:
                   - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
-              - Action:
-                  - iam:PassRole
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-*
-                  - !Sub arn:aws:iam::${AWS::AccountId}:role/auto-deploy-cli
               - Action:
                   - route53-recovery-control-config:ListControlPanels
                   - route53domains:ListDomains
