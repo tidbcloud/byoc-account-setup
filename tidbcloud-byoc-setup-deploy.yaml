@@ -102,6 +102,42 @@ Resources:
                 Resource:
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-controlplane-role
                 Sid: UpdateO11yControlPlaneRole
+              # Requestted by o11y eks
+              - Action:
+                  - "iam:CreateOpenIDConnectProvider"
+                  - "iam:DeleteOpenIDConnectProvider"
+                  - "iam:GetOpenIDConnectProvider"
+                  - "iam:ListOpenIDConnectProviders"
+                  - "iam:TagOpenIDConnectProvider"
+                  - "iam:UntagOpenIDConnectProvider"
+                Resource: "*"
+                Effect: "Allow"
+                Sid: "CreateOIDCProvider"
+              # Requested by o11y eks, sli
+              - Action:
+                  - "iam:GetRole"
+                  - "iam:PassRole"
+                Resource:
+                  - "arn:aws:iam::*:role/auto-deploy-cli"
+                  - "arn:aws:iam::*:role/tidbcloud-o11y-eks-node-role"
+                  - "arn:aws:iam::*:role/tidbcloud-o11y-eks-cluster-role"
+                  - "arn:aws:iam::*:role/tidbcloud-sli-firehose-role"
+                Effect: "Allow"
+                Sid: "GetDeployRole"
+              # Requested by o11y eks
+              - Action:
+                  - "iam:GetRole"
+                  - "iam:CreateServiceLinkedRole"
+                Resource:
+                  - "arn:aws:iam::*:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"
+                Effect: "Allow"
+                Sid: "EKSCreateServiceLinkedRole"
+              # Requested by o11y eks
+              - Action:
+                  - "elasticloadbalancing:DescribeLoadBalancers"
+                Resource: "*"
+                Effect: "Allow"
+                Sid: "ELBRead"
               # Requested by o11y
               - Action:
                   - cloudformation:DescribeStacks
@@ -347,12 +383,6 @@ Resources:
                 Effect: Allow
                 Resource:
                   - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
-              - Action:
-                  - iam:PassRole
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-*
-                  - !Sub arn:aws:iam::${AWS::AccountId}:role/auto-deploy-cli
               - Action:
                   - route53-recovery-control-config:ListControlPanels
                   - route53domains:ListDomains
