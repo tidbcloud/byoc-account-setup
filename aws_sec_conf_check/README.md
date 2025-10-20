@@ -43,7 +43,7 @@ Notes:
 - Results are labeled PASS/FAIL/UNKNOWN with categorized reasons (e.g., NOT_CONFIGURED, PERMISSION_DENIED).
 - Some S3 results are per-bucket; global scope/region “global” may appear for control-plane APIs.
 
-## Recommended commands (常用命令示例)
+## Recommended commands
 Quick, copy-pasteable examples for common workflows. Prefer using an SSO profile (set up via `aws configure sso`) and pass it with `--profile`.
 
 - Interactive deploy with prompts (SSO profile):
