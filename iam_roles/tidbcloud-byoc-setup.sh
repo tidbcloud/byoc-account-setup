@@ -2,8 +2,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 5 ]]; then
-  echo "Usage: $0 <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> [GithubRunnerGoogleAccountId]"
+if [[ $# -lt 6 ]]; then
+  echo "Usage: $0 <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> <O11yGlobalRoleArn> [GithubRunnerGoogleAccountId]"
   exit 1
 fi
 
@@ -12,7 +12,8 @@ ClinicAccountId=$2
 TidbHostedZoneId=$3
 O11yHostedZoneId=$4
 TidbPCAArn=$5
-GithubRunnerGoogleAccountId=${6:-114667344163696279999}
+O11yGlobalRoleArn=$6
+GithubRunnerGoogleAccountId=${7:-114667344163696279999}
 
 aws cloudformation deploy \
   --stack-name tidbcloud-byoc-setup-deploy \
@@ -35,4 +36,5 @@ aws cloudformation deploy \
   --stack-name tidbcloud-byoc-setup-o11y \
   --template-file ./tidbcloud-byoc-setup-o11y.yaml \
   --parameter-overrides O11yHostedZoneId=$O11yHostedZoneId \
+               O11yGlobalRoleArn=$O11yGlobalRoleArn \
   --capabilities CAPABILITY_NAMED_IAM

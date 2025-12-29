@@ -23,17 +23,18 @@ Before you begin, ensure you have the following:
 
 1. **Parameters**
 
-   `tidbcloud-byoc-setup.sh` requires 5 parameters:
+   `tidbcloud-byoc-setup.sh` requires 6 parameters:
 
    * `ControlPlaneAccountId`: The AWS account of TiDB Cloud control plane, you can get it from PingCAP
    * `ClinicAccountId`: The AWS account of clinic service, you can get it from PingCAP
    * `TidbHostedZoneId`: The id of the hosted zone for TiDB, obtained in `prerequisites` step
    * `O11yHostedZoneId`: The id of the hosted zone for O11Y, obtained in `prerequisites` step
    * `TidbPCAArn`: Arn of the private CA you prepared in `prerequisites` step
+   * `O11yGlobalRoleArn`: The ARN of the O11Y global IAM role that can assume the API Gateway role
 
 2. **Run Script**
 
    ```bash
-   bash tidbcloud-byoc-setup.sh <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn>
+   bash tidbcloud-byoc-setup.sh <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> <O11yGlobalRoleArn>
    ```
    > Replace `<parameter>` with the value prepared in the previous step

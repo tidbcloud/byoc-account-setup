@@ -3,6 +3,9 @@ Parameters:
   O11yHostedZoneId:
     Type: String
     Description: "The Route 53 hosted zone ID to manage DNS records for o11y"
+  O11yGlobalRoleArn:
+    Type: String
+    Description: "The ARN of the O11Y global IAM role that can assume the API Gateway role"
 Resources:
   TiDBCloudO11yControlPlaneRole:
     Type: AWS::IAM::Role
@@ -300,3 +303,23 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+  TiDBCloudO11yAPIGWRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tidbcloud-o11y-apigw-role
+      Policies:
+        - PolicyName: APIGatewayInvokePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource: !Sub arn:aws:execute-api:*:${AWS::AccountId}:*/tidbcloud/*
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub ${O11yGlobalRoleArn}
+            Action: sts:AssumeRole
