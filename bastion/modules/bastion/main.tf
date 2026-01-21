@@ -56,7 +56,6 @@ resource "aws_instance" "bastion_instance" {
   metadata_options {
     http_tokens = "required"
   }
-  disable_api_termination = true
 
   user_data = templatefile("files/bastion_user_data.tftpl", {
     aws_region                      = var.aws_region,
