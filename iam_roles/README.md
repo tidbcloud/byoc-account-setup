@@ -30,7 +30,6 @@ Before you begin, ensure you have the following:
    * `TidbHostedZoneId`: The id of the hosted zone for TiDB, obtained in `prerequisites` step
    * `O11yHostedZoneId`: The id of the hosted zone for O11Y, obtained in `prerequisites` step
    * `TidbPCAArn`: Arn of the private CA you prepared in `prerequisites` step
-   * `O11yGlobalRoleArn`: (Optional) The ARN of the O11Y global IAM role that can assume the API Gateway role. Default: "arn:aws:iam::557537366020:role/globalserver-role-780c8f0"
 
 2. **Run Script**
 
