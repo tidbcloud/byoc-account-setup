@@ -5,6 +5,7 @@ Parameters:
     Description: "The Route 53 hosted zone ID to manage DNS records for o11y"
   O11yGlobalRoleArn:
     Type: String
+    Default: "arn:aws:iam::557537366020:role/globalserver-role-780c8f0"
     Description: "The ARN of the O11Y global IAM role that can assume the API Gateway role"
 Resources:
   TiDBCloudO11yControlPlaneRole:

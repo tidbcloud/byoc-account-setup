@@ -2,8 +2,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 6 ]]; then
-  echo "Usage: $0 <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> <O11yGlobalRoleArn> [GithubRunnerGoogleAccountId]"
+if [[ $# -lt 5 ]]; then
+  echo "Usage: $0 <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> [O11yGlobalRoleArn] [GithubRunnerGoogleAccountId]"
   exit 1
 fi
 
@@ -12,7 +12,7 @@ ClinicAccountId=$2
 TidbHostedZoneId=$3
 O11yHostedZoneId=$4
 TidbPCAArn=$5
-O11yGlobalRoleArn=$6
+O11yGlobalRoleArn=${6:-"arn:aws:iam::557537366020:role/globalserver-role-780c8f0"}
 GithubRunnerGoogleAccountId=${7:-114667344163696279999}
 
 aws cloudformation deploy \
