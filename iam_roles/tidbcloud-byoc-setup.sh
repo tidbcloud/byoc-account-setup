@@ -1,9 +1,8 @@
-
 #!/usr/bin/env bash
 set -euo pipefail
 
 if [[ $# -lt 5 ]]; then
-  echo "Usage: $0 <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> [O11yGlobalRoleArn] [GithubRunnerGoogleAccountId]"
+  echo "Usage: $0 <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> [O11yGlobalRoleArns] [GithubRunnerGoogleAccountId]"
   exit 1
 fi
 
@@ -12,7 +11,7 @@ ClinicAccountId=$2
 TidbHostedZoneId=$3
 O11yHostedZoneId=$4
 TidbPCAArn=$5
-O11yGlobalRoleArn=${6:-"arn:aws:iam::557537366020:role/globalserver-role-780c8f0"}
+O11yGlobalRoleArns=${6:-"arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw"}
 GithubRunnerGoogleAccountId=${7:-114667344163696279999}
 
 aws cloudformation deploy \
@@ -36,5 +35,5 @@ aws cloudformation deploy \
   --stack-name tidbcloud-byoc-setup-o11y \
   --template-file ./tidbcloud-byoc-setup-o11y.yaml \
   --parameter-overrides O11yHostedZoneId=$O11yHostedZoneId \
-               O11yGlobalRoleArn=$O11yGlobalRoleArn \
+               O11yGlobalRoleArns=$O11yGlobalRoleArns \
   --capabilities CAPABILITY_NAMED_IAM

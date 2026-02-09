@@ -34,6 +34,7 @@ Before you begin, ensure you have the following:
 2. **Run Script**
 
    ```bash
-   bash tidbcloud-byoc-setup.sh <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> [O11yGlobalRoleArn]
+   bash tidbcloud-byoc-setup.sh <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> [O11yGlobalRoleArns]
    ```
    > Replace `<parameter>` with the value prepared in the previous step
+   > `O11yGlobalRoleArns` is optional and defaults to "arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw" (comma-separated list of role ARNs)
