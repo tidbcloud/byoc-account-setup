@@ -38,3 +38,14 @@ Before you begin, ensure you have the following:
    ```
    > Replace `<parameter>` with the value prepared in the previous step
    > `O11yGlobalRoleArns` is optional and defaults to "arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw" (comma-separated list of role ARNs)
+   > `GithubRunnerGoogleAccountId` is optional and defaults to "114667344163696279999"
+
+## Update
+
+   If you need to update existing CloudFormation stacks (e.g. after modifying the YAML templates), simply re-run `tidbcloud-byoc-setup.sh` with the same parameters:
+
+   ```bash
+   bash tidbcloud-byoc-setup.sh <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> [O11yGlobalRoleArns]
+   ```
+
+   > `aws cloudformation deploy` is idempotent — it will create a stack if it does not exist, or update it if it already exists. If there are no changes, the command will exit with no-op.
