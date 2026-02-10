@@ -38,3 +38,25 @@ Before you begin, ensure you have the following:
    ```
    > Replace `<parameter>` with the value prepared in the previous step
    > `O11yGlobalRoleArns` is optional and defaults to "arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw" (comma-separated list of role ARNs)
+
+## Update
+
+If you need to update existing CloudFormation stacks (e.g. after modifying the YAML templates), use `tidbcloud-byoc-update.sh`. It automatically fetches existing parameters from deployed stacks, so you don't need to pass them again for those parameters.
+
+> Note: The script only reuses parameters that already exist in the stack. If the template introduces a new parameter without a default value, you must still provide that value when updating or the update will fail.
+
+Update a specific stack:
+
+```bash
+bash tidbcloud-byoc-update.sh deploy
+```
+
+Update all stacks:
+
+```bash
+bash tidbcloud-byoc-update.sh all
+```
+
+> `stack` must be one of `deploy`, `dataplane`, `o11y`, or `all`
+> The script requires that the stack has already been created via `tidbcloud-byoc-setup.sh`
+
