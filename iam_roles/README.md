@@ -38,7 +38,6 @@ Before you begin, ensure you have the following:
    ```
    > Replace `<parameter>` with the value prepared in the previous step
    > `O11yGlobalRoleArns` is optional and defaults to "arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw" (comma-separated list of role ARNs)
-   > `GithubRunnerGoogleAccountId` is optional and defaults to "114667344163696279999"
 
 ## Update
 
