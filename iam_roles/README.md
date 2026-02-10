@@ -41,10 +41,20 @@ Before you begin, ensure you have the following:
 
 ## Update
 
-   If you need to update existing CloudFormation stacks (e.g. after modifying the YAML templates), simply re-run `tidbcloud-byoc-setup.sh` with the same parameters:
+If you need to update existing CloudFormation stacks (e.g. after modifying the YAML templates), use `tidbcloud-byoc-update.sh`. It automatically fetches existing parameters from deployed stacks, so you don't need to pass them again.
 
-   ```bash
-   bash tidbcloud-byoc-setup.sh <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> [O11yGlobalRoleArns]
-   ```
+Update a specific stack:
 
-   > `aws cloudformation deploy` is idempotent — it will create a stack if it does not exist, or update it if it already exists. If there are no changes, the command will exit with no-op.
+```bash
+bash tidbcloud-byoc-update.sh deploy
+```
+
+Update all stacks:
+
+```bash
+bash tidbcloud-byoc-update.sh all
+```
+
+> `stack` must be one of `deploy`, `dataplane`, `o11y`, or `all`
+> The script requires that the stack has already been created via `tidbcloud-byoc-setup.sh`
+
