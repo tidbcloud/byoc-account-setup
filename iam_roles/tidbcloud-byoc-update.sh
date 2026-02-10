@@ -49,9 +49,10 @@ update_stack() {
     --stack-name "$stack_name" \
     --template-file "$template_file" \
     --parameter-overrides $overrides \
-    --capabilities CAPABILITY_NAMED_IAM
+    --capabilities CAPABILITY_NAMED_IAM \
+    --no-fail-on-empty-changeset
 
-  echo "Stack ${stack_name} updated successfully."
+  echo "Stack ${stack_name} updated successfully (or no changes were necessary)."
 }
 
 case "$STACK" in
