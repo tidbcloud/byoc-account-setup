@@ -19,7 +19,7 @@ Optional:
                                   (default: 114667344163696279999)
   -h, --help                      Show this help message
 EOF
-  exit 1
+  exit "${1:-1}"
 }
 
 # Defaults
@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
     --github-runner-id)
       GithubRunnerGoogleAccountId="$2"; shift 2 ;;
     -h|--help)
-      usage ;;
+      usage 0 ;;
     *)
       echo "Error: unknown option '$1'"
       usage ;;

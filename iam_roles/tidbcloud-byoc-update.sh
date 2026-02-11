@@ -14,7 +14,7 @@ Options:
 This script automatically fetches existing parameters from deployed stacks.
 No need to pass parameters again.
 EOF
-  exit 1
+  exit "${1:-1}"
 }
 
 STACK=""
@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
     --stack)
       STACK="$2"; shift 2 ;;
     -h|--help)
-      usage ;;
+      usage 0 ;;
     *)
       echo "Error: unknown option '$1'"
       usage ;;
