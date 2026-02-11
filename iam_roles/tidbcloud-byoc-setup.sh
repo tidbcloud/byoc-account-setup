@@ -31,21 +31,35 @@ TidbHostedZoneId=""
 O11yHostedZoneId=""
 TidbPCAArn=""
 
+require_arg() {
+  if [[ $# -lt 2 || "${2-}" == -* ]]; then
+    echo "Error: $1 requires a value"
+    usage
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --control-plane-id)
+      require_arg "$@"
       ControlPlaneAccountId="$2"; shift 2 ;;
     --clinic-id)
+      require_arg "$@"
       ClinicAccountId="$2"; shift 2 ;;
     --tidb-hz-id)
+      require_arg "$@"
       TidbHostedZoneId="$2"; shift 2 ;;
     --o11y-hz-id)
+      require_arg "$@"
       O11yHostedZoneId="$2"; shift 2 ;;
     --pca-arn)
+      require_arg "$@"
       TidbPCAArn="$2"; shift 2 ;;
     --o11y-global-role-arns)
+      require_arg "$@"
       O11yGlobalRoleArns="$2"; shift 2 ;;
     --github-runner-id)
+      require_arg "$@"
       GithubRunnerGoogleAccountId="$2"; shift 2 ;;
     -h|--help)
       usage 0 ;;

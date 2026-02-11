@@ -19,9 +19,17 @@ EOF
 
 STACK=""
 
+require_arg() {
+  if [[ $# -lt 2 || "${2-}" == -* ]]; then
+    echo "Error: $1 requires a value"
+    usage
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --stack)
+      require_arg "$@"
       STACK="$2"; shift 2 ;;
     -h|--help)
       usage 0 ;;
