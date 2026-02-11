@@ -2,20 +2,40 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 <stack>"
-  echo ""
-  echo "stack: the stack to update, one of 'deploy', 'dataplane', 'o11y', or 'all'"
-  echo ""
-  echo "This script automatically fetches existing parameters from deployed stacks."
-  echo "No need to pass parameters again."
+  cat <<EOF
+Usage: $0 --stack <stack>
+
+Required:
+  --stack <stack>   The stack to update, one of 'deploy', 'dataplane', 'o11y', or 'all'
+
+Options:
+  -h, --help        Show this help message
+
+This script automatically fetches existing parameters from deployed stacks.
+No need to pass parameters again.
+EOF
   exit 1
 }
 
-if [[ $# -lt 1 ]]; then
+STACK=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --stack)
+      STACK="$2"; shift 2 ;;
+    -h|--help)
+      usage ;;
+    *)
+      echo "Error: unknown option '$1'"
+      usage ;;
+  esac
+done
+
+if [[ -z "$STACK" ]]; then
+  echo "Error: missing required parameter: --stack"
+  echo ""
   usage
 fi
-
-STACK=$1
 
 # Fetch existing parameters from a CloudFormation stack and format them as --parameter-overrides arguments.
 get_parameter_overrides() {

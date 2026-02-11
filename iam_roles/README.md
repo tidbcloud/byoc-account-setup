@@ -23,21 +23,27 @@ Before you begin, ensure you have the following:
 
 1. **Parameters**
 
-   `tidbcloud-byoc-setup.sh` requires 5 mandatory parameters:
+   `tidbcloud-byoc-setup.sh` requires the following parameters:
 
-   * `ControlPlaneAccountId`: The AWS account of TiDB Cloud control plane, you can get it from PingCAP
-   * `ClinicAccountId`: The AWS account of clinic service, you can get it from PingCAP
-   * `TidbHostedZoneId`: The id of the hosted zone for TiDB, obtained in `prerequisites` step
-   * `O11yHostedZoneId`: The id of the hosted zone for O11Y, obtained in `prerequisites` step
-   * `TidbPCAArn`: Arn of the private CA you prepared in `prerequisites` step
+   | Parameter | Description |
+   |-----------|-------------|
+   | `--control-plane-id` | The AWS account of TiDB Cloud control plane, you can get it from PingCAP |
+   | `--clinic-id` | The AWS account of clinic service, you can get it from PingCAP |
+   | `--tidb-hz-id` | The id of the hosted zone for TiDB, obtained in `prerequisites` step |
+   | `--o11y-hz-id` | The id of the hosted zone for O11Y, obtained in `prerequisites` step |
+   | `--pca-arn` | ARN of the private CA you prepared in `prerequisites` step |
 
 2. **Run Script**
 
    ```bash
-   bash tidbcloud-byoc-setup.sh <ControlPlaneAccountId> <ClinicAccountId> <TidbHostedZoneId> <O11yHostedZoneId> <TidbPCAArn> [O11yGlobalRoleArns]
+   bash tidbcloud-byoc-setup.sh \
+       --control-plane-id <ControlPlaneAccountId> \
+       --clinic-id <ClinicAccountId> \
+       --tidb-hz-id <TidbHostedZoneId> \
+       --o11y-hz-id <O11yHostedZoneId> \
+       --pca-arn <TidbPCAArn>
    ```
    > Replace `<parameter>` with the value prepared in the previous step
-   > `O11yGlobalRoleArns` is optional and defaults to "arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw" (comma-separated list of role ARNs)
 
 ## Update
 
@@ -48,15 +54,14 @@ If you need to update existing CloudFormation stacks (e.g. after modifying the Y
 Update a specific stack:
 
 ```bash
-bash tidbcloud-byoc-update.sh deploy
+bash tidbcloud-byoc-update.sh --stack deploy
 ```
 
 Update all stacks:
 
 ```bash
-bash tidbcloud-byoc-update.sh all
+bash tidbcloud-byoc-update.sh --stack all
 ```
 
-> `stack` must be one of `deploy`, `dataplane`, `o11y`, or `all`
+> `--stack` must be one of `deploy`, `dataplane`, `o11y`, or `all`
 > The script requires that the stack has already been created via `tidbcloud-byoc-setup.sh`
-
