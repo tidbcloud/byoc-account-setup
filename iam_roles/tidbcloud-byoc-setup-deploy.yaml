@@ -139,6 +139,8 @@ Resources:
               # Requested by o11y
               - Action:
                   - elasticloadbalancing:DescribeLoadBalancers
+                  - elasticloadbalancing:DescribeLoadBalancerAttributes
+                  - elasticloadbalancing:DescribeTags
                 Effect: Allow
                 Resource: "*"
                 Sid: ELBRead
