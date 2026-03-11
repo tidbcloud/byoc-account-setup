@@ -528,6 +528,18 @@ Resources:
                 Action:
                   - route53:GetChange
                 Resource: arn:aws:route53:::change/*
+              - Sid: Route53ForChangefeedPrivateLinkPrivateDNS
+                Effect: Allow
+                Action:
+                  - route53:CreateHostedZone
+                  - route53:GetHostedZone
+                  - route53:DeleteHostedZone
+                  - route53:AssociateVPCWithHostedZone
+                  - route53:DisassociateVPCFromHostedZone
+                  - route53:ListResourceRecordSets
+                  - route53:ListTagsForResource
+                  - route53:ChangeTagsForResource
+                Resource: "*"
   TiDBCloudSliRole:
     Type: AWS::IAM::Role
     Properties:
