@@ -136,6 +136,15 @@ Resources:
                   - arn:aws:iam::*:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup
                   - arn:aws:iam::*:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS
                 Sid: EKSCreateServiceLinkedRole
+              - Action:
+                  - iam:CreateServiceLinkedRole
+                Effect: Allow
+                Resource:
+                  - arn:aws:iam::*:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName: ops.apigateway.amazonaws.com
+                Sid: ApiGatewayCreateServiceLinkedRole
               # Requested by o11y
               - Action:
                   - elasticloadbalancing:DescribeLoadBalancers
@@ -411,7 +420,15 @@ Resources:
                   - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*
                 Sid: "LogsDelete"
               - Action:
+                  - logs:DeleteLogStream
+                Effect: Allow
+                Resource:
+                  - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster:log-stream:*
+                  - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*:log-stream:*
+                Sid: "LogsStreamDelete"
+              - Action:
                   - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
                 Effect: Allow
                 Resource: "*"
                 Sid: "LogsReadOnly"
@@ -425,6 +442,7 @@ Resources:
                   - glue:CreateDatabase
                   - glue:DeleteDatabase
                   - glue:CreateTable
+                  - glue:GetTable
                   - glue:TagResource
                   - glue:GetDatabase
                   - glue:GetTags
@@ -435,6 +453,7 @@ Resources:
                   - arn:aws:glue:*:*:table/tidbcloud-*
                   - arn:aws:glue:*:*:userDefinedFunction/tidbcloud-*/*
               - Action:
+                  - apigateway:GET
                   - apigateway:POST
                   - apigateway:PUT
                   - apigateway:TagResource
