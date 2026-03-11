@@ -8,6 +8,15 @@ Parameters:
     Default: "arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw"
     Description: "The ARNs of the O11Y global IAM roles that can assume the API Gateway role (comma-separated list)"
 Resources:
+  # TiDBCloud O11y Control Plane Role
+  #
+  # Note:
+  # During new region provisioning, only the trust relationship of this role
+  # (tidbcloud-o11y-control-plane-role) will be dynamically updated to authorize
+  # the EKS OIDC provider.
+  #
+  # No new IAM permission actions or resource scopes will be introduced.
+  # After provisioning is completed, this IAM role will not be modified further.
   TiDBCloudO11yControlPlaneRole:
     Type: AWS::IAM::Role
     Properties:
