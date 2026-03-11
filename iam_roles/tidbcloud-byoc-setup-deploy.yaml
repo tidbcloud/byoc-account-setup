@@ -442,6 +442,7 @@ Resources:
                   - glue:CreateDatabase
                   - glue:DeleteDatabase
                   - glue:CreateTable
+                  - glue:DeleteTable
                   - glue:GetTable
                   - glue:TagResource
                   - glue:GetDatabase
@@ -456,6 +457,7 @@ Resources:
                   - apigateway:GET
                   - apigateway:POST
                   - apigateway:PUT
+                  - apigateway:DELETE
                   - apigateway:TagResource
                 Effect: Allow
                 Resource:
@@ -474,6 +476,7 @@ Resources:
                   - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
               # Requested by sli
               - Action:
+                  - firehose:ListTagsForDeliveryStream
                   - firehose:DescribeDeliveryStream
                 Effect: Allow
                 Resource:
