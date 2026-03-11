@@ -390,12 +390,16 @@ Resources:
                   - logs:PutRetentionPolicy
                   - logs:CreateLogStream
                   - logs:TagResource
-                  - logs:DescribeLogGroups
                 Effect: Allow
                 Resource:
                   - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster:*
                   - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*:*
                 Sid: "losWrite"
+              - Action:
+                  - logs:DescribeLogGroups
+                Effect: Allow
+                Resource: "*"
+                Sid: "LogsReadOnly"
               # Requested by sli
               - Action:
                   - vpce:AllowMultiRegion
