@@ -323,6 +323,7 @@ Resources:
                 Sid: "Route53Write"
               - Action:
                   - route53:GetHostedZone
+                  - route53:GetChange
                   - route53:ListHostedZones
                   - route53:ListHostedZonesByName
                   - route53:ListResourceRecordSets
@@ -403,6 +404,13 @@ Resources:
                   - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*
                 Sid: "LogsTagReadOnly"
               - Action:
+                  - logs:DeleteLogGroup
+                Effect: Allow
+                Resource:
+                  - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster
+                  - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*
+                Sid: "LogsDelete"
+              - Action:
                   - logs:DescribeLogGroups
                 Effect: Allow
                 Resource: "*"
@@ -415,6 +423,7 @@ Resources:
               # Requested by sli
               - Action:
                   - glue:CreateDatabase
+                  - glue:DeleteDatabase
                   - glue:CreateTable
                   - glue:TagResource
                   - glue:GetDatabase
@@ -424,6 +433,15 @@ Resources:
                   - arn:aws:glue:*:*:catalog
                   - arn:aws:glue:*:*:database/tidbcloud-*
                   - arn:aws:glue:*:*:table/tidbcloud-*
+              - Action:
+                  - apigateway:POST
+                  - apigateway:PUT
+                Effect: Allow
+                Resource:
+                  - arn:aws:apigateway:*::/vpclinks
+                  - arn:aws:apigateway:*::/vpclinks/*
+                  - arn:aws:apigateway:*::/tags/*
+                Sid: "ApiGatewayWrite"
               # Requested by sli
               - Action:
                   - firehose:CreateDeliveryStream
