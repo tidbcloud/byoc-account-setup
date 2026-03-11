@@ -337,16 +337,16 @@ Resources:
                   - cloudwatch:ListTagsForResource
                 Effect: Allow
                 Resource:
-                  - arn:aws:cloudwatch:us-west-2:*:alarm:WatchdogDown-*
-                  - arn:aws:cloudwatch:us-west-2:*:alarm:AlertmanagerClusterFailedToSendAlerts-*
+                  - arn:aws:cloudwatch:*:*:alarm:WatchdogDown-*
+                  - arn:aws:cloudwatch:*:*:alarm:AlertmanagerClusterFailedToSendAlerts-*
                 Sid: "CloudWatchReadOnly"
               # Requested by o11y
               - Action:
                   - cloudwatch:PutMetricAlarm
                 Effect: Allow
                 Resource:
-                  - arn:aws:cloudwatch:us-west-2:*:alarm:WatchdogDown-*
-                  - arn:aws:cloudwatch:us-west-2:*:alarm:AlertmanagerClusterFailedToSendAlerts-*
+                  - arn:aws:cloudwatch:*:*:alarm:WatchdogDown-*
+                  - arn:aws:cloudwatch:*:*:alarm:AlertmanagerClusterFailedToSendAlerts-*
                 Sid: "CloudWatchWrite"
               # Requested by o11y
               - Action:
@@ -433,11 +433,15 @@ Resources:
                   - arn:aws:glue:*:*:catalog
                   - arn:aws:glue:*:*:database/tidbcloud-*
                   - arn:aws:glue:*:*:table/tidbcloud-*
+                  - arn:aws:glue:*:*:userDefinedFunction/tidbcloud-*/*
               - Action:
                   - apigateway:POST
                   - apigateway:PUT
+                  - apigateway:TagResource
                 Effect: Allow
                 Resource:
+                  - arn:aws:apigateway:*::/restapis
+                  - arn:aws:apigateway:*::/restapis/*
                   - arn:aws:apigateway:*::/vpclinks
                   - arn:aws:apigateway:*::/vpclinks/*
                   - arn:aws:apigateway:*::/tags/*
