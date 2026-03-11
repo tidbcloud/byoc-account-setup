@@ -390,6 +390,7 @@ Resources:
                   - logs:PutRetentionPolicy
                   - logs:CreateLogStream
                   - logs:TagResource
+                  - logs:ListTagsForResource
                 Effect: Allow
                 Resource:
                   - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster:*
@@ -411,6 +412,7 @@ Resources:
                   - glue:CreateTable
                   - glue:TagResource
                   - glue:GetDatabase
+                  - glue:GetTags
                 Effect: Allow
                 Resource:
                   - arn:aws:glue:*:*:catalog
