@@ -390,12 +390,18 @@ Resources:
                   - logs:PutRetentionPolicy
                   - logs:CreateLogStream
                   - logs:TagResource
-                  - logs:ListTagsForResource
                 Effect: Allow
                 Resource:
                   - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster:*
                   - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*:*
                 Sid: "losWrite"
+              - Action:
+                  - logs:ListTagsForResource
+                Effect: Allow
+                Resource:
+                  - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster
+                  - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*
+                Sid: "LogsTagReadOnly"
               - Action:
                   - logs:DescribeLogGroups
                 Effect: Allow
