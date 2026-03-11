@@ -470,6 +470,7 @@ Resources:
               # Requested by sli
               - Action:
                   - firehose:CreateDeliveryStream
+                  - firehose:DeleteDeliveryStream
                   - firehose:TagDeliveryStream
                 Effect: Allow
                 Resource:
