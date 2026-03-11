@@ -536,6 +536,7 @@ Resources:
                   - route53:DeleteHostedZone
                   - route53:AssociateVPCWithHostedZone
                   - route53:DisassociateVPCFromHostedZone
+                  - route53:ChangeResourceRecordSets
                   - route53:ListResourceRecordSets
                   - route53:ListTagsForResource
                   - route53:ChangeTagsForResource
