@@ -1,7 +1,7 @@
 # TiDB Cloud BYOC Account Setup
 
 ## Repository Background
-
+<!--cla-->
 [TiDB Cloud](https://www.pingcap.com/tidb-cloud/) is a fully managed cloud database service (SaaS) provided by PingCAP.
 To meet the needs of customers with higher data sovereignty and compliance requirements, PingCAP has introduced the **TiDB Cloud BYOC (Bring Your Own Cloud)** model.
 
