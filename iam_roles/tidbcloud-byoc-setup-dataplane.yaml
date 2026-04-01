@@ -290,6 +290,20 @@ Resources:
                 Action:
                   - sts:AssumeRole
                 Resource: "*"
+        - PolicyName: AllowKMS
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowAccessKMS
+                Effect: Allow
+                Action:
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey*
+                  - kms:CreateGrant
+                  - kms:DescribeKey
+                Resource: "*"
         - PolicyName: AllowSliReporter
           PolicyDocument:
             Version: "2012-10-17"
