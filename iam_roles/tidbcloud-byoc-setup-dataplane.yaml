@@ -20,6 +20,15 @@ Parameters:
     Type: String
     Description: "TiDB Cloud Clinic Account AWS Principal"
     Default: "552185537300"
+  EnableExternalDNSNodeRolePolicy:
+    Type: String
+    Description: "Whether to enable Route53 permissions for external-dns on EKS node role"
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+Conditions:
+  EnableExternalDNSNodeRolePolicyCondition: !Equals [!Ref EnableExternalDNSNodeRolePolicy, "true"]
 Resources:
   # Create an eks service role
   TiDBCloudEKSServiceRole:
@@ -299,6 +308,25 @@ Resources:
                   - firehose:PutRecord
                 Resource:
                   - arn:aws:firehose:*:*:deliverystream/tidbcloud-sli*
+        - !If
+          - EnableExternalDNSNodeRolePolicyCondition
+          - PolicyName: AllowExternalDNS
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - route53:ChangeResourceRecordSets
+                    - route53:ListResourceRecordSets
+                    - route53:ListTagsForResources
+                  Resource:
+                    - !Sub arn:aws:route53:::hostedzone/${HostedZoneId}
+                - Effect: Allow
+                  Action:
+                    - route53:ListHostedZones
+                  Resource:
+                    - "*"
+          - !Ref AWS::NoValue
   # Create instance profile for EKS node role
   TiDBCloudEKSNodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
