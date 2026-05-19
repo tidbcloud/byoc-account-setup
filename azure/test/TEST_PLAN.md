@@ -37,6 +37,45 @@ Required Azure prerequisites:
 - The public DNS zone exists before setup starts.
 - The test operator has the roles documented in `README.md`.
 
+### 0.1 Prepare PingCAP Multi-Tenant Applications
+
+Run this once in the PingCAP Microsoft Entra tenant before customer setup. Use
+unique display names per test run so app registrations can be identified and
+deleted after the test.
+
+```bash
+set -euo pipefail
+
+export PINGCAP_TENANT_ID="<pingcap-tenant-id>"
+export DEPLOYMENT_APP_DISPLAY_NAME="tidbcloud-byoc-${CUSTOMER_ID}-deployment"
+export DATAPLANE_APP_DISPLAY_NAME="tidbcloud-byoc-${CUSTOMER_ID}-dataplane"
+
+az login --tenant "$PINGCAP_TENANT_ID"
+
+DEPLOYMENT_APP_ID=$(az ad app create \
+  --display-name "$DEPLOYMENT_APP_DISPLAY_NAME" \
+  --sign-in-audience AzureADMultipleOrgs \
+  --query appId -o tsv)
+
+DATAPLANE_APP_ID=$(az ad app create \
+  --display-name "$DATAPLANE_APP_DISPLAY_NAME" \
+  --sign-in-audience AzureADMultipleOrgs \
+  --query appId -o tsv)
+
+az ad app show --id "$DEPLOYMENT_APP_ID" --query "{appId:appId, signInAudience:signInAudience}" -o json | jq .
+az ad app show --id "$DATAPLANE_APP_ID" --query "{appId:appId, signInAudience:signInAudience}" -o json | jq .
+```
+
+Persist the two app IDs into `/tmp/tidbcloud-byoc-azure-test.env` as
+`DEPLOYMENT_APP_ID` and `DATAPLANE_APP_ID`.
+
+Pass criteria:
+
+- Both app registrations are created in the PingCAP tenant.
+- Both app registrations use `AzureADMultipleOrgs`.
+- The customer setup can create enterprise applications from both app IDs in
+  the customer tenant.
+
 ## 1. Local Script And Template Validation
 
 ### 1.1 Help And Usage
@@ -170,6 +209,29 @@ az deployment sub show \
   -o json | tee /tmp/tidbcloud-byoc-customer-onboarding.json | jq .
 
 jq -e \
+  --arg customer_id "$CUSTOMER_ID" \
+  --arg location "$LOCATION" \
+  --arg tenant_id "$TENANT_ID" \
+  --arg subscription_id "$SUBSCRIPTION_ID" \
+  --arg dns_zone_subscription_id "$DNS_ZONE_SUBSCRIPTION_ID" \
+  --arg dns_zone_resource_group "$DNS_ZONE_RESOURCE_GROUP" \
+  --arg dns_zone_root_domain "$DNS_ZONE_ROOT_DOMAIN" \
+  --arg deployment_app_id "$DEPLOYMENT_APP_ID" \
+  --arg dataplane_app_id "$DATAPLANE_APP_ID" \
+  '.schemaVersion != null
+    and .customerId == $customer_id
+    and .location == $location
+    and .tenantId == $tenant_id
+    and .subscriptionId == $subscription_id
+    and .dnsZoneSubscriptionId == $dns_zone_subscription_id
+    and .dnsZoneResourceGroupName == $dns_zone_resource_group
+    and .dnsZoneName == $dns_zone_root_domain
+    and .deploymentAppId == $deployment_app_id
+    and .dataplaneAppId == $dataplane_app_id
+    and (.stateStackName | length > 0)' \
+  /tmp/tidbcloud-byoc-setup-state.json >/dev/null
+
+jq -e \
   --arg dataplane_app_id "$(jq -r '.dataplaneAppId' /tmp/tidbcloud-byoc-setup-state.json)" \
   '.schema_version != null
     and .dataplane_app_id == $dataplane_app_id
@@ -297,7 +359,7 @@ az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "/subscrip
   | tee /tmp/tidbcloud-byoc-initial-contributor-assignment.json | jq .
 az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$ACR_RESOURCE_ID" -o table
 az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$ACR_RESOURCE_ID" -o json \
-  | jq --arg role "$INITIAL_DEPLOY_ROLE" --arg scope "$ACR_RESOURCE_ID" '[.[] | select(.roleDefinitionName == $role and .scope == $scope)][0]' \
+  | jq --arg role "$INITIAL_DEPLOY_ROLE" --arg scope "$ACR_RESOURCE_ID" '[.[] | select(.roleDefinitionName == $role and (.scope | ascii_downcase) == ($scope | ascii_downcase))][0]' \
   | tee /tmp/tidbcloud-byoc-acr-contributor-assignment.json | jq .
 az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" -o table
 az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" -o json \
@@ -346,7 +408,7 @@ jq -e --arg role "$INITIAL_DEPLOY_ROLE" --arg scope "/subscriptions/${SUBSCRIPTI
 
 jq -e --arg role "$INITIAL_DEPLOY_ROLE" --arg scope "$ACR_RESOURCE_ID" '
   .roleDefinitionName == $role
-  and .scope == $scope
+  and (.scope | ascii_downcase) == ($scope | ascii_downcase)
 ' /tmp/tidbcloud-byoc-acr-contributor-assignment.json >/dev/null
 
 jq -e '
@@ -397,12 +459,12 @@ jq -e '
 ' /tmp/tidbcloud-byoc-dataplane-dns-role-perms.json >/dev/null
 
 jq -e --arg scope "$DNS_RESOURCE_GROUP_SCOPE" '
-  (.assignableScopes // []) == [$scope]
+  ((.assignableScopes // []) | map(ascii_downcase)) == [($scope | ascii_downcase)]
 ' /tmp/tidbcloud-byoc-dataplane-dns-role.json >/dev/null
 
 jq -e --arg role "$DATAPLANE_DNS_ROLE" --arg scope "$DNS_SCOPE" '
   .roleDefinitionName == $role
-  and .scope == $scope
+  and (.scope | ascii_downcase) == ($scope | ascii_downcase)
 ' /tmp/tidbcloud-byoc-dataplane-dns-role-assignment.json >/dev/null
 ```
 
@@ -532,10 +594,15 @@ ACR_RESOURCE_ID=$(jq -r '.acrResourceId' "$STATE")
 ACR_RESOURCE_GROUP=$(jq -r '.acrResourceGroupName' "$STATE")
 ACR_NAME=$(jq -r '.acrName' "$STATE")
 AKS_ADMIN_GROUP_OBJECT_ID=$(jq -r '.aksAdminGroupObjectId' "$STATE")
+DNS_RESOURCE_GROUP_SCOPE="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${DNS_ZONE_RESOURCE_GROUP}"
+DNS_SCOPE="${DNS_RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/dnsZones/${DNS_ZONE_ROOT_DOMAIN}"
 
 test -z "$(az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" --query '[].id' -o tsv)"
 test -z "$(az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$ACR_RESOURCE_ID" --query '[].id' -o tsv)"
 test -z "$(az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" --query '[].id' -o tsv)"
+az account set --subscription "$DNS_ZONE_SUBSCRIPTION_ID"
+test -z "$(az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "$DNS_SCOPE" --query '[].id' -o tsv)"
+az account set --subscription "$SUBSCRIPTION_ID"
 test "$(az ad group member check --group "$AKS_ADMIN_GROUP_OBJECT_ID" --member-id "$DATAPLANE_SP_OBJECT_ID" --query value -o tsv)" = "false"
 
 az acr show --resource-group "$ACR_RESOURCE_GROUP" --name "$ACR_NAME" --query name -o tsv
@@ -582,15 +649,44 @@ cd "$AZURE_DIR"
 STATE=/tmp/tidbcloud-byoc-setup-state.json
 ACR_RESOURCE_GROUP=$(jq -r '.acrResourceGroupName' "$STATE")
 ACR_NAME=$(jq -r '.acrName' "$STATE")
+DEPLOYMENT_RESOURCE_GROUP=$(jq -r '.deploymentResourceGroupName' "$STATE")
+STORAGE_RESOURCE_GROUP=$(jq -r '.storageResourceGroupName' "$STATE")
+IDENTITIES_RESOURCE_GROUP=$(jq -r '.identitiesResourceGroupName' "$STATE")
+O11Y_RESOURCE_GROUP=$(jq -r '.o11yResourceGroupName' "$STATE")
+AKS_ADMIN_GROUP_OBJECT_ID=$(jq -r '.aksAdminGroupObjectId' "$STATE")
 
 bash tidbcloud-byoc-reset.sh \
   --customer-id "$CUSTOMER_ID" \
   --subscription-id "$SUBSCRIPTION_ID" \
   --yes
 
+for stack in \
+  "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-initial-deploy-access" \
+  "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-dataplane" \
+  "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-o11y" \
+  "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-deploy" \
+  "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-state"
+do
+  if az stack sub show --name "$stack" >/dev/null 2>&1; then
+    echo "Stack still exists after reset: $stack" >&2
+    exit 1
+  fi
+done
+
+for resource_group in "$DEPLOYMENT_RESOURCE_GROUP" "$STORAGE_RESOURCE_GROUP" "$IDENTITIES_RESOURCE_GROUP" "$O11Y_RESOURCE_GROUP" "${O11Y_RESOURCE_GROUP}-infra" "${O11Y_RESOURCE_GROUP}-storage"; do
+  if az group show --name "$resource_group" >/dev/null 2>&1; then
+    echo "Resource group still exists after reset: $resource_group" >&2
+    exit 1
+  fi
+done
+
 az acr show --resource-group "$ACR_RESOURCE_GROUP" --name "$ACR_NAME" --query name -o tsv
 az ad sp show --id "$DEPLOYMENT_APP_ID" --query appId -o tsv
 az ad sp show --id "$DATAPLANE_APP_ID" --query appId -o tsv
+if az ad group show --group "$AKS_ADMIN_GROUP_OBJECT_ID" >/dev/null 2>&1; then
+  echo "AKS admin group still exists after reset: $AKS_ADMIN_GROUP_OBJECT_ID" >&2
+  exit 1
+fi
 ```
 
 Pass criteria:
@@ -602,7 +698,26 @@ Pass criteria:
 
 ### 9.2 Full Reset Deletes ACR And Enterprise Apps
 
-Re-run setup first, then run:
+Re-run setup first:
+
+```bash
+set -euo pipefail
+source /tmp/tidbcloud-byoc-azure-test.env
+cd "$AZURE_DIR"
+
+bash tidbcloud-byoc-setup.sh \
+  --customer-id "$CUSTOMER_ID" \
+  --location "$LOCATION" \
+  --tenant-id "$TENANT_ID" \
+  --subscription-id "$SUBSCRIPTION_ID" \
+  --dns-zone-subscription-id "$DNS_ZONE_SUBSCRIPTION_ID" \
+  --dns-zone-resource-group "$DNS_ZONE_RESOURCE_GROUP" \
+  --dns-zone-root-domain "$DNS_ZONE_ROOT_DOMAIN" \
+  --deployment-app-id "$DEPLOYMENT_APP_ID" \
+  --dataplane-app-id "$DATAPLANE_APP_ID"
+```
+
+Then run:
 
 ```bash
 set -euo pipefail
