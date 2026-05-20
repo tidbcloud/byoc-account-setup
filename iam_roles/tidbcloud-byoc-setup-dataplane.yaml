@@ -299,6 +299,11 @@ Resources:
                 Action:
                   - sts:AssumeRole
                 Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:RebootInstances
+                Resource:
+                  - arn:aws:ec2:*:*:instance/*
         - PolicyName: AllowKMS
           PolicyDocument:
             Version: "2012-10-17"
