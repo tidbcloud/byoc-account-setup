@@ -34,8 +34,6 @@ param aksControlPlaneIdentityName string
 param aksKubeletIdentityName string
 
 var setupStateSchemaVersion = '1'
-var customerOnboardingSchemaVersion = '1'
-
 output setupState object = {
   schemaVersion: setupStateSchemaVersion
   deployName: deployName
@@ -72,8 +70,8 @@ output setupState object = {
 }
 
 output customerOnboarding object = {
-  schema_version: customerOnboardingSchemaVersion
   dataplane_app_id: dataplaneAppId
+  deployment_app_id: deploymentAppId
   customer_tenant_id: tenantId
   customer_subscription_id: subscriptionId
   aks_control_plane_identity_name: aksControlPlaneIdentityName
@@ -89,13 +87,10 @@ output customerOnboarding object = {
   audit_log_storage_account_name: auditLogStorageAccountName
   audit_log_bucket: auditLogContainerName
   storage_accounts_resource_group: storageResourceGroupName
-  o11y_resource_group_name: o11yResourceGroupName
-  o11y_infra_resource_group_name: '${o11yResourceGroupName}-infra'
-  o11y_storage_resource_group_name: '${o11yResourceGroupName}-storage'
-  o11y_workload_identity_names: {
-    regional_server: 'o11y-regional-server'
-    vmbackup: 'o11y-vmbackup'
-    loki: 'o11y-loki'
-    velero: 'o11y-velero'
-  }
+  o11y_aks_resource_group: '${o11yResourceGroupName}-infra'
+  o11y_storage_resource_group: '${o11yResourceGroupName}-storage'
+  o11y_identity_regional_server_resource_id: resourceId(subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-regional-server')
+  o11y_identity_vmbackup_resource_id: resourceId(subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-vmbackup')
+  o11y_identity_loki_resource_id: resourceId(subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-loki')
+  o11y_identity_velero_resource_id: resourceId(subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-velero')
 }

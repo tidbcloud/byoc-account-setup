@@ -233,17 +233,27 @@ jq -e \
 
 jq -e \
   --arg dataplane_app_id "$(jq -r '.dataplaneAppId' /tmp/tidbcloud-byoc-setup-state.json)" \
-  '.schema_version == "1"
-    and .dataplane_app_id == $dataplane_app_id
+  --arg deployment_app_id "$(jq -r '.deploymentAppId' /tmp/tidbcloud-byoc-setup-state.json)" \
+  '.dataplane_app_id == $dataplane_app_id
+    and .deployment_app_id == $deployment_app_id
     and (.customer_acr_resource_id | length > 0)
     and (.customer_acr_login_server | length > 0)
     and (.audit_log_storage_account_name | length > 0)
     and (.audit_log_bucket | length > 0)
     and (.aks_control_plane_identity_name | length > 0)
     and (.aks_kubelet_identity_name | length > 0)
+    and (.aks_managed_identity_resource_group | length > 0)
+    and (.dataplane_admin_group_object_ids | length > 0)
     and (.tidb_cluster_dns_domain | length > 0)
     and (.tidb_cluster_dns_resource_group | length > 0)
-    and (.o11y_resource_group_name | length > 0)
+    and (.storage_accounts_resource_group | length > 0)
+    and (.o11y_aks_resource_group | length > 0)
+    and (.o11y_storage_resource_group | length > 0)
+    and (.o11y_identity_regional_server_resource_id | length > 0)
+    and (.o11y_identity_vmbackup_resource_id | length > 0)
+    and (.o11y_identity_loki_resource_id | length > 0)
+    and (.o11y_identity_velero_resource_id | length > 0)
+    and (has("schema_version") | not)
     and (has("multi_tenant_app_client_id") | not)' \
   /tmp/tidbcloud-byoc-customer-onboarding.json >/dev/null
 ```
@@ -253,10 +263,10 @@ Pass criteria:
 - Both JSON documents parse with `jq`.
 - `setupState.deployName`, `tenantId`, `subscriptionId`, and DNS fields match
   the expected setup contract.
-- `customerOnboarding` contains ACR, audit log, AKS identity, DNS, and O11Y
+- `customerOnboarding` contains app IDs, ACR, audit log, AKS identity, DNS, storage, and O11Y
   fields needed by auto-deploy.
-- `customerOnboarding.schema_version` is present.
 - `customerOnboarding.dataplane_app_id` matches `setupState.dataplaneAppId`.
+- `customerOnboarding.deployment_app_id` matches `setupState.deploymentAppId`.
 - `customerOnboarding.multi_tenant_app_client_id` is absent.
 
 ## 3. Resource Verification
