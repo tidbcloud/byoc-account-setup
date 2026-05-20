@@ -3,7 +3,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 usage() {
   cat <<USAGE
-Usage: $0 --customer-id <id> --subscription-id <id> --stack <deploy|initial-deploy-access|dataplane|o11y|state|all>
+Usage: $0 --deploy-name <id> --subscription-id <id> --stack <deploy|initial-deploy-access|dataplane|o11y|state|all>
 
 Reads durable onboarding state from the customer subscription, then reruns one
 or more Azure Deployment Stacks. Re-running a deployment stack updates managed
@@ -12,26 +12,26 @@ temporary initial deployment access if it has been revoked.
 USAGE
   exit "${1:-1}"
 }
-CUSTOMER_ID=""; SUBSCRIPTION_ID=""; STACK=""
+DEPLOY_NAME=""; SUBSCRIPTION_ID=""; STACK=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --customer-id) [[ $# -ge 2 ]] || usage; CUSTOMER_ID="$2"; shift 2 ;;
+    --deploy-name) [[ $# -ge 2 ]] || usage; DEPLOY_NAME="$2"; shift 2 ;;
     --subscription-id) [[ $# -ge 2 ]] || usage; SUBSCRIPTION_ID="$2"; shift 2 ;;
     --stack) [[ $# -ge 2 ]] || usage; STACK="$2"; shift 2 ;;
     -h|--help) usage 0 ;;
     *) echo "Error: unknown option '$1'"; usage ;;
   esac
 done
-[[ -n "$CUSTOMER_ID" && -n "$SUBSCRIPTION_ID" && -n "$STACK" ]] || usage
+[[ -n "$DEPLOY_NAME" && -n "$SUBSCRIPTION_ID" && -n "$STACK" ]] || usage
 command -v jq >/dev/null || { echo "Error: jq is required to read onboarding state."; exit 1; }
 az account set --subscription "$SUBSCRIPTION_ID"
 
 stack_name() {
-  printf 'cust-%s-tidbcloud-byoc-setup-%s\n' "$CUSTOMER_ID" "$1"
+  printf 'cust-%s-tidbcloud-byoc-setup-%s\n' "$DEPLOY_NAME" "$1"
 }
 
 legacy_stack_name() {
-  printf 'tidbcloud-byoc-setup-%s-%s\n' "$1" "$CUSTOMER_ID"
+  printf 'tidbcloud-byoc-setup-%s-%s\n' "$1" "$DEPLOY_NAME"
 }
 
 STATE_STACK_NAME=$(stack_name state)
@@ -117,7 +117,7 @@ update_deploy() {
   local deployment_sp_object_id
   deployment_sp_object_id=$(ensure_service_principal "$DEPLOYMENT_APP_ID")
   deploy_stack "$DEPLOY_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-deploy.bicep" \
-    customerId="$CUSTOMER_ID" location="$LOCATION" deploymentPrincipalObjectId="$deployment_sp_object_id" deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME"
+    deployName="$DEPLOY_NAME" location="$LOCATION" deploymentPrincipalObjectId="$deployment_sp_object_id" deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME"
 }
 update_initial_deploy_access() {
   local deployment_sp_object_id
@@ -130,7 +130,7 @@ update_dataplane() {
   dataplane_sp_object_id=$(ensure_service_principal "$DATAPLANE_APP_ID")
   ensure_group_member "$AKS_ADMIN_GROUP_OBJECT_ID" "$dataplane_sp_object_id"
   deploy_stack "$DATAPLANE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-dataplane.bicep" \
-    customerId="$CUSTOMER_ID" location="$LOCATION" dataplanePrincipalObjectId="$dataplane_sp_object_id" \
+    deployName="$DEPLOY_NAME" location="$LOCATION" dataplanePrincipalObjectId="$dataplane_sp_object_id" \
     dnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" dnsZoneResourceGroupName="$DNS_ZONE_RESOURCE_GROUP" dnsZoneName="$DNS_ZONE_ROOT_DOMAIN" \
     acrSubscriptionId="$SUBSCRIPTION_ID" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME" \
     storageResourceGroupName="$STORAGE_RESOURCE_GROUP" identitiesResourceGroupName="$IDENTITIES_RESOURCE_GROUP" auditLogStorageAccountName="$AUDIT_LOG_STORAGE_ACCOUNT_NAME" auditLogContainerName="$AUDIT_LOG_CONTAINER_NAME" \
@@ -138,11 +138,11 @@ update_dataplane() {
 }
 update_o11y() {
   deploy_stack "$O11Y_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-o11y.bicep" \
-    customerId="$CUSTOMER_ID" location="$LOCATION" o11yResourceGroupName="$O11Y_RESOURCE_GROUP"
+    deployName="$DEPLOY_NAME" location="$LOCATION" o11yResourceGroupName="$O11Y_RESOURCE_GROUP"
 }
 update_state() {
   deploy_stack_delete_unmanaged "$STATE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-state.bicep" \
-    customerId="$CUSTOMER_ID" location="$LOCATION" tenantId="$TENANT_ID" subscriptionId="$SUBSCRIPTION_ID" \
+    deployName="$DEPLOY_NAME" location="$LOCATION" tenantId="$TENANT_ID" subscriptionId="$SUBSCRIPTION_ID" \
     dnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" dnsZoneResourceGroupName="$DNS_ZONE_RESOURCE_GROUP" dnsZoneName="$DNS_ZONE_ROOT_DOMAIN" \
     deploymentAppId="$DEPLOYMENT_APP_ID" dataplaneAppId="$DATAPLANE_APP_ID" \
     deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" storageResourceGroupName="$STORAGE_RESOURCE_GROUP" identitiesResourceGroupName="$IDENTITIES_RESOURCE_GROUP" \

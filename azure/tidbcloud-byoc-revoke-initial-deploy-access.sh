@@ -3,10 +3,10 @@ set -euo pipefail
 
 usage() {
   cat <<USAGE
-Usage: $0 --customer-id <id> --subscription-id <id> --yes
+Usage: $0 --deploy-name <id> --subscription-id <id> --yes
 
 Revokes the temporary TiDB Cloud initial deployment access by deleting the
-customer-specific Azure Deployment Stack that owns:
+deployment-specific Azure Deployment Stack that owns:
   - the temporary subscription-scope Contributor role assignment to the
     Deployment application
 
@@ -16,13 +16,13 @@ USAGE
   exit "${1:-1}"
 }
 
-CUSTOMER_ID=""
+DEPLOY_NAME=""
 SUBSCRIPTION_ID=""
 YES=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --customer-id) [[ $# -ge 2 ]] || usage; CUSTOMER_ID="$2"; shift 2 ;;
+    --deploy-name) [[ $# -ge 2 ]] || usage; DEPLOY_NAME="$2"; shift 2 ;;
     --subscription-id) [[ $# -ge 2 ]] || usage; SUBSCRIPTION_ID="$2"; shift 2 ;;
     --yes) YES=true; shift ;;
     -h|--help) usage 0 ;;
@@ -30,21 +30,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n "$CUSTOMER_ID" && -n "$SUBSCRIPTION_ID" ]] || usage
+[[ -n "$DEPLOY_NAME" && -n "$SUBSCRIPTION_ID" ]] || usage
 [[ "$YES" == "true" ]] || {
   cat <<MSG
 Refusing to delete without --yes.
 
 This command will delete only the temporary initial deploy access stack:
-  cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-initial-deploy-access
+  cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-initial-deploy-access
 
 Re-run with --yes after the first BYOC deployment completes.
 MSG
   exit 1
 }
 
-INITIAL_DEPLOY_ACCESS_STACK_NAME=cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-initial-deploy-access
-LEGACY_INITIAL_DEPLOY_ACCESS_STACK_NAME=tidbcloud-byoc-setup-initial-deploy-access-${CUSTOMER_ID}
+INITIAL_DEPLOY_ACCESS_STACK_NAME=cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-initial-deploy-access
+LEGACY_INITIAL_DEPLOY_ACCESS_STACK_NAME=tidbcloud-byoc-setup-initial-deploy-access-${DEPLOY_NAME}
 
 az account set --subscription "$SUBSCRIPTION_ID"
 

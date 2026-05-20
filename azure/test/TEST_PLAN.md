@@ -12,7 +12,7 @@ Create a local environment file for the test run:
 
 ```bash
 cat > /tmp/tidbcloud-byoc-azure-test.env <<'EOF'
-export CUSTOMER_ID="test-customer-001"
+export DEPLOY_NAME="test-deploy-001"
 export LOCATION="eastus"
 export TENANT_ID="<tenant-id>"
 export SUBSCRIPTION_ID="<byoc-subscription-id>"
@@ -47,8 +47,8 @@ deleted after the test.
 set -euo pipefail
 
 export PINGCAP_TENANT_ID="<pingcap-tenant-id>"
-export DEPLOYMENT_APP_DISPLAY_NAME="tidbcloud-byoc-${CUSTOMER_ID}-deployment"
-export DATAPLANE_APP_DISPLAY_NAME="tidbcloud-byoc-${CUSTOMER_ID}-dataplane"
+export DEPLOYMENT_APP_DISPLAY_NAME="tidbcloud-byoc-${DEPLOY_NAME}-deployment"
+export DATAPLANE_APP_DISPLAY_NAME="tidbcloud-byoc-${DEPLOY_NAME}-dataplane"
 
 az login --tenant "$PINGCAP_TENANT_ID"
 
@@ -115,16 +115,16 @@ expect_fail() {
 }
 
 expect_fail bash tidbcloud-byoc-setup.sh
-expect_fail bash tidbcloud-byoc-setup.sh --customer-id "$CUSTOMER_ID"
-expect_fail bash tidbcloud-byoc-setup.sh --customer-id --location "$LOCATION"
+expect_fail bash tidbcloud-byoc-setup.sh --deploy-name "$DEPLOY_NAME"
+expect_fail bash tidbcloud-byoc-setup.sh --deploy-name --location "$LOCATION"
 expect_fail bash tidbcloud-byoc-setup.sh --unknown
 
 expect_fail bash tidbcloud-byoc-update.sh
-expect_fail bash tidbcloud-byoc-update.sh --customer-id "$CUSTOMER_ID" --subscription-id "$SUBSCRIPTION_ID" --stack bad
+expect_fail bash tidbcloud-byoc-update.sh --deploy-name "$DEPLOY_NAME" --subscription-id "$SUBSCRIPTION_ID" --stack bad
 
-expect_fail bash tidbcloud-byoc-revoke-initial-deploy-access.sh --customer-id "$CUSTOMER_ID" --subscription-id "$SUBSCRIPTION_ID"
-expect_fail bash tidbcloud-byoc-revoke-app-access.sh --customer-id "$CUSTOMER_ID" --subscription-id "$SUBSCRIPTION_ID"
-expect_fail bash tidbcloud-byoc-reset.sh --customer-id "$CUSTOMER_ID" --subscription-id "$SUBSCRIPTION_ID"
+expect_fail bash tidbcloud-byoc-revoke-initial-deploy-access.sh --deploy-name "$DEPLOY_NAME" --subscription-id "$SUBSCRIPTION_ID"
+expect_fail bash tidbcloud-byoc-revoke-app-access.sh --deploy-name "$DEPLOY_NAME" --subscription-id "$SUBSCRIPTION_ID"
+expect_fail bash tidbcloud-byoc-reset.sh --deploy-name "$DEPLOY_NAME" --subscription-id "$SUBSCRIPTION_ID"
 ```
 
 Pass criteria:
@@ -167,7 +167,7 @@ source /tmp/tidbcloud-byoc-azure-test.env
 cd "$AZURE_DIR"
 
 bash tidbcloud-byoc-setup.sh \
-  --customer-id "$CUSTOMER_ID" \
+  --deploy-name "$DEPLOY_NAME" \
   --location "$LOCATION" \
   --tenant-id "$TENANT_ID" \
   --subscription-id "$SUBSCRIPTION_ID" \
@@ -183,7 +183,7 @@ Pass criteria:
 
 - Script exits successfully.
 - Output includes "Setup complete."
-- Output includes `customerId`, `tenantId`, `subscriptionId`, and
+- Output includes `deployName`, `tenantId`, `subscriptionId`, and
   `onboardingStateStack` handoff values.
 
 ### 2.2 Capture State Outputs
@@ -194,7 +194,7 @@ source /tmp/tidbcloud-byoc-azure-test.env
 
 az account set --subscription "$SUBSCRIPTION_ID"
 
-STATE_STACK_NAME="cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-state"
+STATE_STACK_NAME="cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-state"
 STATE_DEPLOYMENT_ID=$(az stack sub show --name "$STATE_STACK_NAME" --query deploymentId -o tsv)
 STATE_DEPLOYMENT_NAME=${STATE_DEPLOYMENT_ID##*/}
 
@@ -209,7 +209,7 @@ az deployment sub show \
   -o json | tee /tmp/tidbcloud-byoc-customer-onboarding.json | jq .
 
 jq -e \
-  --arg customer_id "$CUSTOMER_ID" \
+  --arg deploy_name "$DEPLOY_NAME" \
   --arg location "$LOCATION" \
   --arg tenant_id "$TENANT_ID" \
   --arg subscription_id "$SUBSCRIPTION_ID" \
@@ -218,8 +218,8 @@ jq -e \
   --arg dns_zone_root_domain "$DNS_ZONE_ROOT_DOMAIN" \
   --arg deployment_app_id "$DEPLOYMENT_APP_ID" \
   --arg dataplane_app_id "$DATAPLANE_APP_ID" \
-  '.schemaVersion != null
-    and .customerId == $customer_id
+  '.schemaVersion == "1"
+    and .deployName == $deploy_name
     and .location == $location
     and .tenantId == $tenant_id
     and .subscriptionId == $subscription_id
@@ -233,7 +233,7 @@ jq -e \
 
 jq -e \
   --arg dataplane_app_id "$(jq -r '.dataplaneAppId' /tmp/tidbcloud-byoc-setup-state.json)" \
-  '.schema_version != null
+  '.schema_version == "1"
     and .dataplane_app_id == $dataplane_app_id
     and (.customer_acr_resource_id | length > 0)
     and (.customer_acr_login_server | length > 0)
@@ -251,7 +251,7 @@ jq -e \
 Pass criteria:
 
 - Both JSON documents parse with `jq`.
-- `setupState.customerId`, `tenantId`, `subscriptionId`, and DNS fields match
+- `setupState.deployName`, `tenantId`, `subscriptionId`, and DNS fields match
   the expected setup contract.
 - `customerOnboarding` contains ACR, audit log, AKS identity, DNS, and O11Y
   fields needed by auto-deploy.
@@ -349,8 +349,8 @@ AKS_ADMIN_GROUP_OBJECT_ID=$(jq -r '.aksAdminGroupObjectId' "$STATE")
 DNS_RESOURCE_GROUP_SCOPE="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${DNS_ZONE_RESOURCE_GROUP}"
 DNS_SCOPE="${DNS_RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/dnsZones/${DNS_ZONE_ROOT_DOMAIN}"
 INITIAL_DEPLOY_ROLE="Contributor"
-DATAPLANE_ROLE="TiDB BYOC Dataplane Operator - ${CUSTOMER_ID}"
-DATAPLANE_DNS_ROLE="TiDB BYOC Dataplane DNS Record Operator - ${CUSTOMER_ID}"
+DATAPLANE_ROLE="TiDB BYOC Dataplane Operator - ${DEPLOY_NAME}"
+DATAPLANE_DNS_ROLE="TiDB BYOC Dataplane DNS Record Operator - ${DEPLOY_NAME}"
 DATAPLANE_BLOB_LIST_ONLY_CONDITION="!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'} AND NOT SubOperationMatches{'Blob.List'})"
 
 az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" -o table
@@ -489,7 +489,7 @@ source /tmp/tidbcloud-byoc-azure-test.env
 cd "$AZURE_DIR"
 
 bash tidbcloud-byoc-setup.sh \
-  --customer-id "$CUSTOMER_ID" \
+  --deploy-name "$DEPLOY_NAME" \
   --location "$LOCATION" \
   --tenant-id "$TENANT_ID" \
   --subscription-id "$SUBSCRIPTION_ID" \
@@ -515,18 +515,18 @@ source /tmp/tidbcloud-byoc-azure-test.env
 cd "$AZURE_DIR"
 
 bash tidbcloud-byoc-revoke-initial-deploy-access.sh \
-  --customer-id "$CUSTOMER_ID" \
+  --deploy-name "$DEPLOY_NAME" \
   --subscription-id "$SUBSCRIPTION_ID" \
   --yes
 
 az account set --subscription "$SUBSCRIPTION_ID"
-if az stack sub show --name "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-initial-deploy-access" >/dev/null 2>&1; then
+if az stack sub show --name "cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-initial-deploy-access" >/dev/null 2>&1; then
   echo "Initial deploy access stack still exists" >&2
   exit 1
 fi
 
 bash tidbcloud-byoc-revoke-initial-deploy-access.sh \
-  --customer-id "$CUSTOMER_ID" \
+  --deploy-name "$DEPLOY_NAME" \
   --subscription-id "$SUBSCRIPTION_ID" \
   --yes
 ```
@@ -546,13 +546,13 @@ cd "$AZURE_DIR"
 
 for stack in deploy dataplane o11y state all; do
   bash tidbcloud-byoc-update.sh \
-    --customer-id "$CUSTOMER_ID" \
+    --deploy-name "$DEPLOY_NAME" \
     --subscription-id "$SUBSCRIPTION_ID" \
     --stack "$stack"
 done
 
 bash tidbcloud-byoc-update.sh \
-  --customer-id "$CUSTOMER_ID" \
+  --deploy-name "$DEPLOY_NAME" \
   --subscription-id "$SUBSCRIPTION_ID" \
   --stack initial-deploy-access
 ```
@@ -573,7 +573,7 @@ source /tmp/tidbcloud-byoc-azure-test.env
 cd "$AZURE_DIR"
 
 bash tidbcloud-byoc-revoke-app-access.sh \
-  --customer-id "$CUSTOMER_ID" \
+  --deploy-name "$DEPLOY_NAME" \
   --subscription-id "$SUBSCRIPTION_ID" \
   --keep-enterprise-apps \
   --yes
@@ -606,7 +606,7 @@ az account set --subscription "$SUBSCRIPTION_ID"
 test "$(az ad group member check --group "$AKS_ADMIN_GROUP_OBJECT_ID" --member-id "$DATAPLANE_SP_OBJECT_ID" --query value -o tsv)" = "false"
 
 az acr show --resource-group "$ACR_RESOURCE_GROUP" --name "$ACR_NAME" --query name -o tsv
-az stack sub show --name "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-state" --query name -o tsv
+az stack sub show --name "cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-state" --query name -o tsv
 ```
 
 Pass criteria:
@@ -624,7 +624,7 @@ source /tmp/tidbcloud-byoc-azure-test.env
 cd "$AZURE_DIR"
 
 bash tidbcloud-byoc-setup.sh \
-  --customer-id "$CUSTOMER_ID" \
+  --deploy-name "$DEPLOY_NAME" \
   --location "$LOCATION" \
   --tenant-id "$TENANT_ID" \
   --subscription-id "$SUBSCRIPTION_ID" \
@@ -656,16 +656,16 @@ O11Y_RESOURCE_GROUP=$(jq -r '.o11yResourceGroupName' "$STATE")
 AKS_ADMIN_GROUP_OBJECT_ID=$(jq -r '.aksAdminGroupObjectId' "$STATE")
 
 bash tidbcloud-byoc-reset.sh \
-  --customer-id "$CUSTOMER_ID" \
+  --deploy-name "$DEPLOY_NAME" \
   --subscription-id "$SUBSCRIPTION_ID" \
   --yes
 
 for stack in \
-  "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-initial-deploy-access" \
-  "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-dataplane" \
-  "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-o11y" \
-  "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-deploy" \
-  "cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-state"
+  "cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-initial-deploy-access" \
+  "cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-dataplane" \
+  "cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-o11y" \
+  "cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-deploy" \
+  "cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-state"
 do
   if az stack sub show --name "$stack" >/dev/null 2>&1; then
     echo "Stack still exists after reset: $stack" >&2
@@ -706,7 +706,7 @@ source /tmp/tidbcloud-byoc-azure-test.env
 cd "$AZURE_DIR"
 
 bash tidbcloud-byoc-setup.sh \
-  --customer-id "$CUSTOMER_ID" \
+  --deploy-name "$DEPLOY_NAME" \
   --location "$LOCATION" \
   --tenant-id "$TENANT_ID" \
   --subscription-id "$SUBSCRIPTION_ID" \
@@ -725,7 +725,7 @@ source /tmp/tidbcloud-byoc-azure-test.env
 cd "$AZURE_DIR"
 
 bash tidbcloud-byoc-reset.sh \
-  --customer-id "$CUSTOMER_ID" \
+  --deploy-name "$DEPLOY_NAME" \
   --subscription-id "$SUBSCRIPTION_ID" \
   --delete-acr \
   --delete-enterprise-apps \
@@ -758,7 +758,7 @@ Run the full plan for at least these variants:
 Record the result after each run:
 
 ```text
-Customer ID:
+Deploy name:
 Tenant ID:
 BYOC subscription:
 DNS subscription:

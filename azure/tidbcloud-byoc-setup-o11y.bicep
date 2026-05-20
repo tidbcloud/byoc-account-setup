@@ -1,8 +1,8 @@
 targetScope = 'subscription'
 
-param customerId string
+param deployName string
 param location string
-param o11yResourceGroupName string = 'rg-tidbcloud-${customerId}-o11y'
+param o11yResourceGroupName string = 'rg-tidbcloud-${deployName}-o11y'
 
 var o11yInfraResourceGroupName = '${o11yResourceGroupName}-infra'
 var o11yStorageResourceGroupName = '${o11yResourceGroupName}-storage'

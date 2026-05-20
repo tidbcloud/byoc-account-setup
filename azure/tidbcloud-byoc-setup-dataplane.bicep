@@ -1,6 +1,6 @@
 targetScope = 'subscription'
 
-param customerId string
+param deployName string
 param location string
 param dataplanePrincipalObjectId string
 param dnsZoneSubscriptionId string
@@ -9,14 +9,14 @@ param dnsZoneName string
 param acrSubscriptionId string
 param acrResourceGroupName string
 param acrName string
-param storageResourceGroupName string = 'rg-tidbcloud-${customerId}-storage'
-param identitiesResourceGroupName string = 'rg-tidbcloud-${customerId}-identities'
+param storageResourceGroupName string = 'rg-tidbcloud-${deployName}-storage'
+param identitiesResourceGroupName string = 'rg-tidbcloud-${deployName}-identities'
 param auditLogStorageAccountName string
 param auditLogContainerName string = 'audit-log'
-param aksControlPlaneIdentityName string = 'tidbcloud-${customerId}-aks-control-plane'
-param aksKubeletIdentityName string = 'tidbcloud-${customerId}-aks-kubelet'
-param dataplaneRoleName string = 'TiDB BYOC Dataplane Operator - ${customerId}'
-param dataplaneDnsRoleName string = 'TiDB BYOC Dataplane DNS Record Operator - ${customerId}'
+param aksControlPlaneIdentityName string = 'tidbcloud-${deployName}-aks-control-plane'
+param aksKubeletIdentityName string = 'tidbcloud-${deployName}-aks-kubelet'
+param dataplaneRoleName string = 'TiDB BYOC Dataplane Operator - ${deployName}'
+param dataplaneDnsRoleName string = 'TiDB BYOC Dataplane DNS Record Operator - ${deployName}'
 
 var dataplaneBlobListOnlyCondition = '''!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'} AND NOT SubOperationMatches{'Blob.List'})'''
 

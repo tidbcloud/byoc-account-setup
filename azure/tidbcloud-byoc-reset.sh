@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<USAGE
-Usage: $0 --customer-id <id> --subscription-id <id> --yes [--delete-acr] [--delete-enterprise-apps]
+Usage: $0 --deploy-name <id> --subscription-id <id> --yes [--delete-acr] [--delete-enterprise-apps]
 
 Deletes the Azure resources created by the BYOC setup scripts for a test reset.
 This is intended for non-production retesting only.
@@ -27,7 +27,7 @@ USAGE
   exit "${1:-1}"
 }
 
-CUSTOMER_ID=""
+DEPLOY_NAME=""
 SUBSCRIPTION_ID=""
 YES=false
 DELETE_ACR=false
@@ -35,7 +35,7 @@ DELETE_ENTERPRISE_APPS=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --customer-id) [[ $# -ge 2 ]] || usage; CUSTOMER_ID="$2"; shift 2 ;;
+    --deploy-name) [[ $# -ge 2 ]] || usage; DEPLOY_NAME="$2"; shift 2 ;;
     --subscription-id) [[ $# -ge 2 ]] || usage; SUBSCRIPTION_ID="$2"; shift 2 ;;
     --yes) YES=true; shift ;;
     --delete-acr) DELETE_ACR=true; shift ;;
@@ -45,7 +45,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n "$CUSTOMER_ID" && -n "$SUBSCRIPTION_ID" ]] || usage
+[[ -n "$DEPLOY_NAME" && -n "$SUBSCRIPTION_ID" ]] || usage
 command -v jq >/dev/null || { echo "Error: jq is required to read onboarding state."; exit 1; }
 [[ "$YES" == "true" ]] || {
   cat <<MSG
@@ -59,11 +59,11 @@ MSG
 az account set --subscription "$SUBSCRIPTION_ID"
 
 stack_name() {
-  printf 'cust-%s-tidbcloud-byoc-setup-%s\n' "$CUSTOMER_ID" "$1"
+  printf 'cust-%s-tidbcloud-byoc-setup-%s\n' "$DEPLOY_NAME" "$1"
 }
 
 legacy_stack_name() {
-  printf 'tidbcloud-byoc-setup-%s-%s\n' "$1" "$CUSTOMER_ID"
+  printf 'tidbcloud-byoc-setup-%s-%s\n' "$1" "$DEPLOY_NAME"
 }
 
 STATE_STACK_NAME=$(stack_name state)
@@ -159,7 +159,7 @@ delete_enterprise_app_if_exists() {
 }
 
 cat <<PLAN
-Test reset will delete setup-managed resources for customerId: ${CUSTOMER_ID}
+Test reset will delete setup-managed resources for deployName: ${DEPLOY_NAME}
 
 Deployment stacks:
   ${INITIAL_DEPLOY_ACCESS_STACK_NAME}
@@ -208,4 +208,4 @@ else
   echo "Keeping PingCAP enterprise applications. Use --delete-enterprise-apps for a full test reset in an isolated test tenant."
 fi
 
-echo "Test reset complete for customerId: ${CUSTOMER_ID}"
+echo "Test reset complete for deployName: ${DEPLOY_NAME}"

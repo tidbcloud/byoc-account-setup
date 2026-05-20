@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<USAGE
-Usage: $0 --customer-id <id> --subscription-id <id> --yes [--keep-enterprise-apps]
+Usage: $0 --deploy-name <id> --subscription-id <id> --yes [--keep-enterprise-apps]
 
 Revokes PingCAP multi-tenant application access while keeping customer-created
 Azure resources. Use this when the customer wants to stop using TiDB Cloud BYOC
@@ -25,14 +25,14 @@ USAGE
   exit "${1:-1}"
 }
 
-CUSTOMER_ID=""
+DEPLOY_NAME=""
 SUBSCRIPTION_ID=""
 YES=false
 KEEP_ENTERPRISE_APPS=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --customer-id) [[ $# -ge 2 ]] || usage; CUSTOMER_ID="$2"; shift 2 ;;
+    --deploy-name) [[ $# -ge 2 ]] || usage; DEPLOY_NAME="$2"; shift 2 ;;
     --subscription-id) [[ $# -ge 2 ]] || usage; SUBSCRIPTION_ID="$2"; shift 2 ;;
     --yes) YES=true; shift ;;
     --keep-enterprise-apps) KEEP_ENTERPRISE_APPS=true; shift ;;
@@ -41,7 +41,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n "$CUSTOMER_ID" && -n "$SUBSCRIPTION_ID" ]] || usage
+[[ -n "$DEPLOY_NAME" && -n "$SUBSCRIPTION_ID" ]] || usage
 command -v jq >/dev/null || { echo "Error: jq is required to read onboarding state."; exit 1; }
 [[ "$YES" == "true" ]] || {
   cat <<MSG
@@ -55,11 +55,11 @@ MSG
 az account set --subscription "$SUBSCRIPTION_ID"
 
 stack_name() {
-  printf 'cust-%s-tidbcloud-byoc-setup-%s\n' "$CUSTOMER_ID" "$1"
+  printf 'cust-%s-tidbcloud-byoc-setup-%s\n' "$DEPLOY_NAME" "$1"
 }
 
 legacy_stack_name() {
-  printf 'tidbcloud-byoc-setup-%s-%s\n' "$1" "$CUSTOMER_ID"
+  printf 'tidbcloud-byoc-setup-%s-%s\n' "$1" "$DEPLOY_NAME"
 }
 
 STATE_STACK_NAME=$(stack_name state)
@@ -148,7 +148,7 @@ DATAPLANE_SP_OBJECT_ID=$(find_service_principal_object_id "$DATAPLANE_APP_ID")
 DNS_ZONE_SCOPE="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${DNS_ZONE_RESOURCE_GROUP}/providers/Microsoft.Network/dnsZones/${DNS_ZONE_NAME}"
 
 cat <<PLAN
-Revoking PingCAP application access for customerId: ${CUSTOMER_ID}
+Revoking PingCAP application access for deployName: ${DEPLOY_NAME}
 
 Deployment app:
   appId: ${DEPLOYMENT_APP_ID:-<none>}

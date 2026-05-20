@@ -13,7 +13,7 @@ After you complete this guide, TiDB Cloud can:
 
 1. Prepare one Azure subscription for TiDB Cloud BYOC workloads.
 2. Prepare one public DNS zone for TiDB cluster DNS records.
-3. Obtain your TiDB Cloud BYOC customer ID and two TiDB Cloud multi-tenant application IDs from PingCAP.
+3. Obtain your TiDB Cloud BYOC deploy name and two TiDB Cloud multi-tenant application IDs from PingCAP.
 4. Run the setup scripts provided by PingCAP.
 5. Share the onboarding state stack coordinates with PingCAP.
 
@@ -23,7 +23,7 @@ After you complete this guide, TiDB Cloud can:
 
 Contact PingCAP and provide the Azure region where you want to deploy BYOC. PingCAP will provide:
 
-- `customerId`: the TiDB Cloud BYOC customer ID used to name customer-specific Azure resources;
+- `deployName`: the TiDB Cloud BYOC deploy name used to name deployment-specific Azure resources;
 - two multi-tenant application IDs;
 
 | Application | Purpose |
@@ -88,28 +88,28 @@ The public DNS zone itself is customer-provided. Custom roles and role assignmen
 
 | Category | Resource created or reconciled | Why it is needed |
 |---|---|---|
-| Deployment orchestration | Deployment stack `cust-<customerId>-tidbcloud-byoc-setup-deploy` | Manages deployment resource group, ACR resource group, and ACR |
-| Deployment orchestration | Deployment stack `cust-<customerId>-tidbcloud-byoc-setup-initial-deploy-access` | Manages temporary initial deployment access resources |
-| Deployment orchestration | Deployment stack `cust-<customerId>-tidbcloud-byoc-setup-dataplane` | Manages dataplane resource groups, identities, and audit storage |
-| Deployment orchestration | Deployment stack `cust-<customerId>-tidbcloud-byoc-setup-o11y` | Manages O11Y resource groups and identities |
-| Deployment orchestration | Deployment stack `cust-<customerId>-tidbcloud-byoc-setup-state` | Stores durable setup state and auto-deploy handoff outputs |
+| Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-deploy` | Manages deployment resource group, ACR resource group, and ACR |
+| Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-initial-deploy-access` | Manages temporary initial deployment access resources |
+| Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-dataplane` | Manages dataplane resource groups, identities, and audit storage |
+| Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-o11y` | Manages O11Y resource groups and identities |
+| Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-state` | Stores durable setup state and auto-deploy handoff outputs |
 | Microsoft Entra ID | Enterprise application for the deployment application ID | Allows the TiDB Cloud deployment application to authenticate into the tenant |
 | Microsoft Entra ID | Enterprise application for the dataplane management application ID | Allows the TiDB Cloud dataplane management application to authenticate into the tenant |
-| Microsoft Entra ID | Group `tidbcloud-<customerId>-aks-admins` | Grants dataplane management AKS administrator access |
-| Microsoft Entra ID | Dataplane management application membership in `tidbcloud-<customerId>-aks-admins` | Allows the dataplane management application to administer BYOC AKS clusters |
-| Resource groups | Deployment resource group `rg-tidbcloud-<customerId>-deploy` | Holds deployment-related customer resources reserved for setup and operations |
-| Resource groups | ACR resource group `rg-tidbcloud-<customerId>-acr` | Holds the customer Azure Container Registry |
-| Resource groups | Dataplane storage resource group `rg-tidbcloud-<customerId>-storage` | Holds setup-created dataplane storage resources |
-| Resource groups | Dataplane identities resource group `rg-tidbcloud-<customerId>-identities` | Holds dataplane user-assigned managed identities |
-| Container registry | Azure Container Registry `tidbcloud<alphanumeric-customerId>acr`, or the provided ACR name | Stores container images used by TiDB Cloud components |
-| Dataplane storage | Audit log storage account `st<last-12-alphanumeric-characters-of-customerId>auditlog` | Stores audit logs for TiDB Cloud control-plane operations on the dataplane |
+| Microsoft Entra ID | Group `tidbcloud-<deployName>-aks-admins` | Grants dataplane management AKS administrator access |
+| Microsoft Entra ID | Dataplane management application membership in `tidbcloud-<deployName>-aks-admins` | Allows the dataplane management application to administer BYOC AKS clusters |
+| Resource groups | Deployment resource group `rg-tidbcloud-<deployName>-deploy` | Holds deployment-related customer resources reserved for setup and operations |
+| Resource groups | ACR resource group `rg-tidbcloud-<deployName>-acr` | Holds the customer Azure Container Registry |
+| Resource groups | Dataplane storage resource group `rg-tidbcloud-<deployName>-storage` | Holds setup-created dataplane storage resources |
+| Resource groups | Dataplane identities resource group `rg-tidbcloud-<deployName>-identities` | Holds dataplane user-assigned managed identities |
+| Container registry | Azure Container Registry `tidbcloud<alphanumeric-deployName>acr`, or the provided ACR name | Stores container images used by TiDB Cloud components |
+| Dataplane storage | Audit log storage account `st<last-12-alphanumeric-characters-of-deployName>auditlog` | Stores audit logs for TiDB Cloud control-plane operations on the dataplane |
 | Dataplane storage | Default blob service on the audit log storage account | Enables blob container management on the audit log storage account |
 | Dataplane storage | Audit log blob container `audit-log` | Stores audit log objects with public access disabled |
-| Dataplane identities | User-assigned managed identity `tidbcloud-<customerId>-aks-control-plane` | Allows AKS to manage required Azure network resources |
-| Dataplane identities | User-assigned managed identity `tidbcloud-<customerId>-aks-kubelet` | Allows AKS workloads to pull images and access blob storage |
-| O11Y resource groups | O11Y identity/base resource group `rg-tidbcloud-<customerId>-o11y` | Holds O11Y workload managed identities |
-| O11Y resource groups | O11Y AKS and network resource group `rg-tidbcloud-<customerId>-o11y-infra` | Holds O11Y AKS and network resources managed after setup |
-| O11Y resource groups | O11Y storage resource group `rg-tidbcloud-<customerId>-o11y-storage` | Holds O11Y storage resources managed after setup |
+| Dataplane identities | User-assigned managed identity `tidbcloud-<deployName>-aks-control-plane` | Allows AKS to manage required Azure network resources |
+| Dataplane identities | User-assigned managed identity `tidbcloud-<deployName>-aks-kubelet` | Allows AKS workloads to pull images and access blob storage |
+| O11Y resource groups | O11Y identity/base resource group `rg-tidbcloud-<deployName>-o11y` | Holds O11Y workload managed identities |
+| O11Y resource groups | O11Y AKS and network resource group `rg-tidbcloud-<deployName>-o11y-infra` | Holds O11Y AKS and network resources managed after setup |
+| O11Y resource groups | O11Y storage resource group `rg-tidbcloud-<deployName>-o11y-storage` | Holds O11Y storage resources managed after setup |
 | O11Y managed identities | User-assigned managed identity `o11y-regional-server` | Allows O11Y regional server workloads to manage O11Y infrastructure and storage |
 | O11Y managed identities | User-assigned managed identity `o11y-vmbackup` | Allows VM backup workloads to access O11Y storage |
 | O11Y managed identities | User-assigned managed identity `o11y-loki` | Allows Loki workloads to access O11Y storage |
@@ -127,8 +127,8 @@ Each TiDB Cloud application receives only the access required for its responsibi
 |---|---|---|---|
 | Deployment application | Built-in `Contributor` | BYOC subscription | Temporary access to create initial BYOC infrastructure and read onboarding state. This access can be revoked after the first deployment completes |
 | Deployment application | Built-in `Contributor` | Customer ACR only | Query and push container images during daily management and upgrade workflows |
-| Dataplane management application | Custom `TiDB BYOC Dataplane Operator - <customerId>` | BYOC subscription | Manage TiDB dataplane resources after deployment |
-| Dataplane management application | Custom `TiDB BYOC Dataplane DNS Record Operator - <customerId>` | Public DNS zone | Create, update, read, and delete TiDB A records in the public DNS zone |
+| Dataplane management application | Custom `TiDB BYOC Dataplane Operator - <deployName>` | BYOC subscription | Manage TiDB dataplane resources after deployment |
+| Dataplane management application | Custom `TiDB BYOC Dataplane DNS Record Operator - <deployName>` | Public DNS zone | Create, update, read, and delete TiDB A records in the public DNS zone |
 
 ##### Deployment application temporary subscription access
 
@@ -146,7 +146,7 @@ This ACR-scoped grant is intentionally kept after initial deployment. TiDB Cloud
 
 `Contributor` on an ACR is broader than image push. It can manage that ACR resource, but only at the ACR scope; it does not grant access to the rest of the subscription.
 
-##### `TiDB BYOC Dataplane Operator - <customerId>`
+##### `TiDB BYOC Dataplane Operator - <deployName>`
 
 This custom role should contain only the Azure permissions required for dataplane management:
 
@@ -167,7 +167,7 @@ The BYOC subscription role assignment uses Azure RBAC condition version `2.0` to
 
 This runtime role should not include Azure role-assignment permissions such as `Microsoft.Authorization/roleAssignments/write`.
 
-##### `TiDB BYOC Dataplane DNS Record Operator - <customerId>`
+##### `TiDB BYOC Dataplane DNS Record Operator - <deployName>`
 
 This custom role should contain only the Azure permissions required for TiDB Cloud DNS A record management:
 
@@ -200,13 +200,13 @@ The setup creates these fixed-name customer-owned managed identities in the O11Y
 - `o11y-loki`
 - `o11y-velero`
 
-No separate O11Y resource group input is required. The setup derives O11Y resource group names from `customerId`:
+No separate O11Y resource group input is required. The setup derives O11Y resource group names from `deployName`:
 
 | O11Y resource group | Name |
 |---|---|
-| Identity/base resource group | `rg-tidbcloud-<customerId>-o11y` |
-| AKS and network resource group | `rg-tidbcloud-<customerId>-o11y-infra` |
-| Storage resource group | `rg-tidbcloud-<customerId>-o11y-storage` |
+| Identity/base resource group | `rg-tidbcloud-<deployName>-o11y` |
+| AKS and network resource group | `rg-tidbcloud-<deployName>-o11y-infra` |
+| Storage resource group | `rg-tidbcloud-<deployName>-o11y-storage` |
 
 The setup grants these RBAC roles:
 
@@ -226,7 +226,7 @@ Prepare the following values before running the scripts:
 
 | Input | Description |
 |---|---|
-| `customerId` | TiDB Cloud BYOC customer ID provided by PingCAP. The setup uses it to name customer-specific Azure resources. |
+| `deployName` | TiDB Cloud BYOC deploy name provided by PingCAP. The setup uses it to name deployment-specific Azure resources. |
 | `tenantId` | Your Microsoft Entra tenant ID |
 | `subscriptionId` | Subscription ID for TiDB Cloud BYOC workloads |
 | `subscriptionIdOfDNSZone` | Subscription ID that contains the public DNS zone |
@@ -235,7 +235,7 @@ Prepare the following values before running the scripts:
 | Deployment application ID | Multi-tenant application ID provided by PingCAP |
 | Dataplane management application ID | Multi-tenant application ID provided by PingCAP |
 
-If optional resource names are not provided, the setup script uses deterministic names based on `customerId`. The ACR is created in a separate resource group, `rg-tidbcloud-<customerId>-acr`. For the audit log storage account, the script uses `st<last-12-alphanumeric-characters-of-customerId>auditlog` to stay within Azure's 24-character storage account name limit.
+If optional resource names are not provided, the setup script uses deterministic names based on `deployName`. The ACR is created in a separate resource group, `rg-tidbcloud-<deployName>-acr`. For the audit log storage account, the script uses `st<last-12-alphanumeric-characters-of-deployName>auditlog` to stay within Azure's 24-character storage account name limit.
 
 ### Run the scripts
 
@@ -243,7 +243,7 @@ Run the setup script once to create or reconcile the Azure resources, enterprise
 
 ```bash
 bash tidbcloud-byoc-setup.sh \
-  --customer-id <customerId> \
+  --deploy-name <deployName> \
   --location <azureRegion> \
   --tenant-id <tenantId> \
   --subscription-id <subscriptionId> \
@@ -264,10 +264,10 @@ After the scripts finish, the canonical handoff is stored in the onboarding stat
 
 After the scripts finish, provide these values to PingCAP:
 
-- `customerId`;
+- `deployName`;
 - `tenantId`;
 - `subscriptionId`;
-- onboarding state stack name, `cust-<customerId>-tidbcloud-byoc-setup-state`.
+- onboarding state stack name, `cust-<deployName>-tidbcloud-byoc-setup-state`.
 
 TiDB Cloud uses the deployment application to read the onboarding state stack and retrieve the `customerOnboarding` output before temporary initial deployment access is revoked.
 
@@ -279,7 +279,7 @@ After the first BYOC deployment completes, revoke the temporary initial deployme
 
 ```bash
 bash tidbcloud-byoc-revoke-initial-deploy-access.sh \
-  --customer-id <customerId> \
+  --deploy-name <deployName> \
   --subscription-id <subscriptionId> \
   --yes
 ```
@@ -291,9 +291,9 @@ This deletes only the temporary initial deployment access stack. It does not del
 Use the update script to reconcile one setup-managed deployment stack:
 
 ```bash
-bash tidbcloud-byoc-update.sh --customer-id <customerId> --subscription-id <subscriptionId> --stack deploy
-bash tidbcloud-byoc-update.sh --customer-id <customerId> --subscription-id <subscriptionId> --stack dataplane
-bash tidbcloud-byoc-update.sh --customer-id <customerId> --subscription-id <subscriptionId> --stack o11y
+bash tidbcloud-byoc-update.sh --deploy-name <deployName> --subscription-id <subscriptionId> --stack deploy
+bash tidbcloud-byoc-update.sh --deploy-name <deployName> --subscription-id <subscriptionId> --stack dataplane
+bash tidbcloud-byoc-update.sh --deploy-name <deployName> --subscription-id <subscriptionId> --stack o11y
 ```
 
 Use `--stack all` to update all long-lived stacks. The update script reads the durable onboarding state from the customer subscription, not from local files.
@@ -302,7 +302,7 @@ Run `--stack initial-deploy-access` only when PingCAP needs to re-enable tempora
 
 ```bash
 bash tidbcloud-byoc-update.sh \
-  --customer-id <customerId> \
+  --deploy-name <deployName> \
   --subscription-id <subscriptionId> \
   --stack initial-deploy-access
 ```
@@ -318,8 +318,8 @@ For upgrades, TiDB Cloud keeps:
 | Access | Why it remains |
 |---|---|
 | Deployment application `Contributor` on the customer ACR | Query existing images to avoid duplicate synchronization and push images required by the upgrade |
-| Dataplane management application `TiDB BYOC Dataplane Operator - <customerId>` | Manage TiDB dataplane resources during runtime operations |
-| Dataplane management application `TiDB BYOC Dataplane DNS Record Operator - <customerId>` | Manage TiDB A records in the public DNS zone |
+| Dataplane management application `TiDB BYOC Dataplane Operator - <deployName>` | Manage TiDB dataplane resources during runtime operations |
+| Dataplane management application `TiDB BYOC Dataplane DNS Record Operator - <deployName>` | Manage TiDB A records in the public DNS zone |
 | Customer-owned managed identity assignments | Allow AKS and O11Y workloads to access customer-owned Azure resources |
 
 ### How do I reset a test setup?
@@ -332,7 +332,7 @@ Destroy any BYOC deployments created after setup before running this command. Th
 
 ```bash
 bash tidbcloud-byoc-reset.sh \
-  --customer-id <customerId> \
+  --deploy-name <deployName> \
   --subscription-id <subscriptionId> \
   --yes
 ```
@@ -349,7 +349,7 @@ To also delete the ACR during test reset, add `--delete-acr`:
 
 ```bash
 bash tidbcloud-byoc-reset.sh \
-  --customer-id <customerId> \
+  --deploy-name <deployName> \
   --subscription-id <subscriptionId> \
   --delete-acr \
   --yes
@@ -359,7 +359,7 @@ For a full reset in an isolated test tenant, run:
 
 ```bash
 bash tidbcloud-byoc-reset.sh \
-  --customer-id <customerId> \
+  --deploy-name <deployName> \
   --subscription-id <subscriptionId> \
   --delete-acr \
   --delete-enterprise-apps \
@@ -376,7 +376,7 @@ Run this command with an Azure operator that can delete role assignments, update
 
 ```bash
 bash tidbcloud-byoc-revoke-app-access.sh \
-  --customer-id <customerId> \
+  --deploy-name <deployName> \
   --subscription-id <subscriptionId> \
   --yes
 ```

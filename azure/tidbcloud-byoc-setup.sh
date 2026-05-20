@@ -8,7 +8,7 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Required:
-  --customer-id <id>
+  --deploy-name <id>
   --location <azure-region>
   --tenant-id <tenant-id>
   --subscription-id <subscription-id>
@@ -19,8 +19,8 @@ Required:
   --dataplane-app-id <client-id>
 
 Optional:
-  --acr-resource-group <name>             Default: rg-tidbcloud-<customer-id>-acr
-  --acr-name <name>                       Default: deterministic tidbcloud<customer-id>acr name
+  --acr-resource-group <name>             Default: rg-tidbcloud-<deploy-name>-acr
+  --acr-name <name>                       Default: deterministic tidbcloud<deploy-name>acr name
   -h, --help                              Show this help message
 USAGE
   exit "${1:-1}"
@@ -28,12 +28,12 @@ USAGE
 
 require_arg() { [[ $# -ge 2 && "${2-}" != -* ]] || { echo "Error: $1 requires a value"; usage; }; }
 
-CUSTOMER_ID=""; LOCATION=""; TENANT_ID=""; SUBSCRIPTION_ID=""; DNS_ZONE_SUBSCRIPTION_ID=""; DNS_ZONE_RESOURCE_GROUP=""; DNS_ZONE_ROOT_DOMAIN=""; DEPLOYMENT_APP_ID=""; DATAPLANE_APP_ID=""
+DEPLOY_NAME=""; LOCATION=""; TENANT_ID=""; SUBSCRIPTION_ID=""; DNS_ZONE_SUBSCRIPTION_ID=""; DNS_ZONE_RESOURCE_GROUP=""; DNS_ZONE_ROOT_DOMAIN=""; DEPLOYMENT_APP_ID=""; DATAPLANE_APP_ID=""
 ACR_RESOURCE_GROUP=""; ACR_NAME=""; AUDIT_LOG_CONTAINER_NAME="audit-log"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --customer-id) require_arg "$@"; CUSTOMER_ID="$2"; shift 2 ;;
+    --deploy-name) require_arg "$@"; DEPLOY_NAME="$2"; shift 2 ;;
     --location) require_arg "$@"; LOCATION="$2"; shift 2 ;;
     --tenant-id) require_arg "$@"; TENANT_ID="$2"; shift 2 ;;
     --subscription-id) require_arg "$@"; SUBSCRIPTION_ID="$2"; shift 2 ;;
@@ -50,37 +50,37 @@ while [[ $# -gt 0 ]]; do
 done
 
 missing=()
-for pair in CUSTOMER_ID:--customer-id LOCATION:--location TENANT_ID:--tenant-id SUBSCRIPTION_ID:--subscription-id DNS_ZONE_SUBSCRIPTION_ID:--dns-zone-subscription-id DNS_ZONE_RESOURCE_GROUP:--dns-zone-resource-group DNS_ZONE_ROOT_DOMAIN:--dns-zone-root-domain DEPLOYMENT_APP_ID:--deployment-app-id DATAPLANE_APP_ID:--dataplane-app-id; do
+for pair in DEPLOY_NAME:--deploy-name LOCATION:--location TENANT_ID:--tenant-id SUBSCRIPTION_ID:--subscription-id DNS_ZONE_SUBSCRIPTION_ID:--dns-zone-subscription-id DNS_ZONE_RESOURCE_GROUP:--dns-zone-resource-group DNS_ZONE_ROOT_DOMAIN:--dns-zone-root-domain DEPLOYMENT_APP_ID:--deployment-app-id DATAPLANE_APP_ID:--dataplane-app-id; do
   var=${pair%%:*}; flag=${pair#*:}; [[ -n "${!var}" ]] || missing+=("$flag")
 done
 [[ ${#missing[@]} -eq 0 ]] || { echo "Error: missing required parameters: ${missing[*]}"; usage; }
-compact=$(echo "$CUSTOMER_ID" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')
-[[ -n "$compact" ]] || { echo "Error: --customer-id must contain at least one letter or digit"; exit 1; }
+compact=$(echo "$DEPLOY_NAME" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')
+[[ -n "$compact" ]] || { echo "Error: --deploy-name must contain at least one letter or digit"; exit 1; }
 if ((${#compact} > 12)); then
-  audit_storage_customer_part=${compact: -12}
+  audit_storage_deploy_part=${compact: -12}
 else
-  audit_storage_customer_part=$compact
+  audit_storage_deploy_part=$compact
 fi
-DEPLOYMENT_RESOURCE_GROUP=rg-tidbcloud-${CUSTOMER_ID}-deploy
-ACR_RESOURCE_GROUP=${ACR_RESOURCE_GROUP:-rg-tidbcloud-${CUSTOMER_ID}-acr}
-STORAGE_RESOURCE_GROUP=rg-tidbcloud-${CUSTOMER_ID}-storage
-IDENTITIES_RESOURCE_GROUP=rg-tidbcloud-${CUSTOMER_ID}-identities
-O11Y_RESOURCE_GROUP=rg-tidbcloud-${CUSTOMER_ID}-o11y
+DEPLOYMENT_RESOURCE_GROUP=rg-tidbcloud-${DEPLOY_NAME}-deploy
+ACR_RESOURCE_GROUP=${ACR_RESOURCE_GROUP:-rg-tidbcloud-${DEPLOY_NAME}-acr}
+STORAGE_RESOURCE_GROUP=rg-tidbcloud-${DEPLOY_NAME}-storage
+IDENTITIES_RESOURCE_GROUP=rg-tidbcloud-${DEPLOY_NAME}-identities
+O11Y_RESOURCE_GROUP=rg-tidbcloud-${DEPLOY_NAME}-o11y
 ACR_NAME=${ACR_NAME:-tidbcloud${compact}acr}
-AUDIT_LOG_STORAGE_ACCOUNT_NAME=st${audit_storage_customer_part}auditlog
-AKS_ADMIN_GROUP_NAME=tidbcloud-${CUSTOMER_ID}-aks-admins
-AKS_CONTROL_PLANE_IDENTITY_NAME=tidbcloud-${CUSTOMER_ID}-aks-control-plane
-AKS_KUBELET_IDENTITY_NAME=tidbcloud-${CUSTOMER_ID}-aks-kubelet
-DEPLOY_STACK_NAME=cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-deploy
-INITIAL_DEPLOY_ACCESS_STACK_NAME=cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-initial-deploy-access
-DATAPLANE_STACK_NAME=cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-dataplane
-O11Y_STACK_NAME=cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-o11y
-STATE_STACK_NAME=cust-${CUSTOMER_ID}-tidbcloud-byoc-setup-state
+AUDIT_LOG_STORAGE_ACCOUNT_NAME=st${audit_storage_deploy_part}auditlog
+AKS_ADMIN_GROUP_NAME=tidbcloud-${DEPLOY_NAME}-aks-admins
+AKS_CONTROL_PLANE_IDENTITY_NAME=tidbcloud-${DEPLOY_NAME}-aks-control-plane
+AKS_KUBELET_IDENTITY_NAME=tidbcloud-${DEPLOY_NAME}-aks-kubelet
+DEPLOY_STACK_NAME=cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-deploy
+INITIAL_DEPLOY_ACCESS_STACK_NAME=cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-initial-deploy-access
+DATAPLANE_STACK_NAME=cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-dataplane
+O11Y_STACK_NAME=cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-o11y
+STATE_STACK_NAME=cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-state
 
 validate_max_length() {
   local label=$1 value=$2 max_length=$3
   if ((${#value} > max_length)); then
-    echo "Error: ${label} '${value}' is ${#value} characters; Azure limit is ${max_length}. Shorten --customer-id." >&2
+    echo "Error: ${label} '${value}' is ${#value} characters; Azure limit is ${max_length}. Shorten --deploy-name." >&2
     exit 1
   fi
 }
@@ -156,7 +156,7 @@ deploy_stack_delete_unmanaged() {
 
 echo "Creating or updating deployment stack: deploy"
 deploy_stack "$DEPLOY_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-deploy.bicep" \
-  customerId="$CUSTOMER_ID" location="$LOCATION" deploymentPrincipalObjectId="$DEPLOYMENT_SP_OBJECT_ID" deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME"
+  deployName="$DEPLOY_NAME" location="$LOCATION" deploymentPrincipalObjectId="$DEPLOYMENT_SP_OBJECT_ID" deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME"
 
 echo "Creating or updating deployment stack: initial deploy access"
 deploy_stack_delete_unmanaged "$INITIAL_DEPLOY_ACCESS_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-initial-deploy-access.bicep" \
@@ -166,7 +166,7 @@ ACR_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${ACR_RESOURCE
 
 echo "Creating or updating deployment stack: dataplane"
 deploy_stack "$DATAPLANE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-dataplane.bicep" \
-  customerId="$CUSTOMER_ID" location="$LOCATION" dataplanePrincipalObjectId="$DATAPLANE_SP_OBJECT_ID" \
+  deployName="$DEPLOY_NAME" location="$LOCATION" dataplanePrincipalObjectId="$DATAPLANE_SP_OBJECT_ID" \
   dnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" dnsZoneResourceGroupName="$DNS_ZONE_RESOURCE_GROUP" dnsZoneName="$DNS_ZONE_ROOT_DOMAIN" \
   acrSubscriptionId="$SUBSCRIPTION_ID" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME" \
   storageResourceGroupName="$STORAGE_RESOURCE_GROUP" identitiesResourceGroupName="$IDENTITIES_RESOURCE_GROUP" auditLogStorageAccountName="$AUDIT_LOG_STORAGE_ACCOUNT_NAME" auditLogContainerName="$AUDIT_LOG_CONTAINER_NAME" \
@@ -174,12 +174,12 @@ deploy_stack "$DATAPLANE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-datapla
 
 echo "Creating or updating deployment stack: o11y"
 deploy_stack "$O11Y_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-o11y.bicep" \
-  customerId="$CUSTOMER_ID" location="$LOCATION" o11yResourceGroupName="$O11Y_RESOURCE_GROUP"
+  deployName="$DEPLOY_NAME" location="$LOCATION" o11yResourceGroupName="$O11Y_RESOURCE_GROUP"
 
 ACR_LOGIN_SERVER=$(az acr show --name "$ACR_NAME" --resource-group "$ACR_RESOURCE_GROUP" --query loginServer -o tsv)
 echo "Creating or updating deployment stack: state"
 deploy_stack_delete_unmanaged "$STATE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-state.bicep" \
-  customerId="$CUSTOMER_ID" location="$LOCATION" tenantId="$TENANT_ID" subscriptionId="$SUBSCRIPTION_ID" \
+  deployName="$DEPLOY_NAME" location="$LOCATION" tenantId="$TENANT_ID" subscriptionId="$SUBSCRIPTION_ID" \
   dnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" dnsZoneResourceGroupName="$DNS_ZONE_RESOURCE_GROUP" dnsZoneName="$DNS_ZONE_ROOT_DOMAIN" \
   deploymentAppId="$DEPLOYMENT_APP_ID" dataplaneAppId="$DATAPLANE_APP_ID" \
   deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" storageResourceGroupName="$STORAGE_RESOURCE_GROUP" identitiesResourceGroupName="$IDENTITIES_RESOURCE_GROUP" \
@@ -194,7 +194,7 @@ cat <<OUTPUT
 Setup complete.
 
 Share these values with PingCAP:
-  customerId: ${CUSTOMER_ID}
+  deployName: ${DEPLOY_NAME}
   tenantId: ${TENANT_ID}
   subscriptionId: ${SUBSCRIPTION_ID}
   onboardingStateStack: ${STATE_STACK_NAME}

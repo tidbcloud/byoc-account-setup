@@ -4,7 +4,7 @@ targetScope = 'subscription'
 // This stack intentionally manages no customer workload resources; its outputs
 // are the canonical handoff record used by update scripts and auto-deploy.
 
-param customerId string
+param deployName string
 param location string
 param tenantId string
 param subscriptionId string
@@ -33,11 +33,12 @@ param aksAdminGroupObjectId string
 param aksControlPlaneIdentityName string
 param aksKubeletIdentityName string
 
-var onboardingStateSchemaVersion = '1'
+var setupStateSchemaVersion = '1'
+var customerOnboardingSchemaVersion = '1'
 
 output setupState object = {
-  schemaVersion: onboardingStateSchemaVersion
-  customerId: customerId
+  schemaVersion: setupStateSchemaVersion
+  deployName: deployName
   location: location
   tenantId: tenantId
   subscriptionId: subscriptionId
@@ -58,7 +59,7 @@ output setupState object = {
   dataplaneStackName: dataplaneStackName
   o11yStackName: o11yStackName
   stateStackName: stateStackName
-  revokeInitialDeployAccessCommand: 'bash tidbcloud-byoc-revoke-initial-deploy-access.sh --customer-id ${customerId} --subscription-id ${subscriptionId} --yes'
+  revokeInitialDeployAccessCommand: 'bash tidbcloud-byoc-revoke-initial-deploy-access.sh --deploy-name ${deployName} --subscription-id ${subscriptionId} --yes'
   acrName: acrName
   acrResourceId: acrResourceId
   acrLoginServer: acrLoginServer
@@ -71,7 +72,7 @@ output setupState object = {
 }
 
 output customerOnboarding object = {
-  schema_version: onboardingStateSchemaVersion
+  schema_version: customerOnboardingSchemaVersion
   dataplane_app_id: dataplaneAppId
   customer_tenant_id: tenantId
   customer_subscription_id: subscriptionId

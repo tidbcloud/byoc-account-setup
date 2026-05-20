@@ -1,10 +1,10 @@
 targetScope = 'subscription'
 
-param customerId string
+param deployName string
 param location string
 param deploymentPrincipalObjectId string
-param deploymentResourceGroupName string = 'rg-tidbcloud-${customerId}-deploy'
-param acrResourceGroupName string = 'rg-tidbcloud-${customerId}-acr'
+param deploymentResourceGroupName string = 'rg-tidbcloud-${deployName}-deploy'
+param acrResourceGroupName string = 'rg-tidbcloud-${deployName}-acr'
 param acrName string
 
 var contributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
