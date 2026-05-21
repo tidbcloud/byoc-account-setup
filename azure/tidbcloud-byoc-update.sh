@@ -30,19 +30,8 @@ stack_name() {
   printf 'cust-%s-tidbcloud-byoc-setup-%s\n' "$DEPLOY_NAME" "$1"
 }
 
-legacy_stack_name() {
-  printf 'tidbcloud-byoc-setup-%s-%s\n' "$1" "$DEPLOY_NAME"
-}
-
 STATE_STACK_NAME=$(stack_name state)
 STATE_DEPLOYMENT_ID=$(az stack sub show --name "$STATE_STACK_NAME" --query deploymentId -o tsv 2>/dev/null || true)
-if [[ -z "$STATE_DEPLOYMENT_ID" || "$STATE_DEPLOYMENT_ID" == "null" ]]; then
-  LEGACY_STATE_STACK_NAME=$(legacy_stack_name state)
-  STATE_DEPLOYMENT_ID=$(az stack sub show --name "$LEGACY_STATE_STACK_NAME" --query deploymentId -o tsv 2>/dev/null || true)
-  if [[ -n "$STATE_DEPLOYMENT_ID" && "$STATE_DEPLOYMENT_ID" != "null" ]]; then
-    STATE_STACK_NAME="$LEGACY_STATE_STACK_NAME"
-  fi
-fi
 [[ -n "$STATE_DEPLOYMENT_ID" && "$STATE_DEPLOYMENT_ID" != "null" ]] \
   || { echo "Error: onboarding state stack '$(stack_name state)' was not found in subscription '$SUBSCRIPTION_ID'."; exit 1; }
 STATE_DEPLOYMENT_NAME=${STATE_DEPLOYMENT_ID##*/}
