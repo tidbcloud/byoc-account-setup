@@ -54,6 +54,12 @@ Resources:
                   - s3:ListBucket
                   - sts:AssumeRole
                   - sts:GetCallerIdentity
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:ListImages
                 Effect: Allow
                 Resource: "*"
         - PolicyName: ExternalDNSPolicy
