@@ -7,7 +7,7 @@ param acrSubscriptionId string
 param acrResourceGroupName string
 param acrName string
 param o11yAksControlPlaneIdentityName string = 'tidbcloud-${deployName}-o11y-aks-control-plane'
-param o11yAksKubeletIdentityName string = 'tidbcloud-${deployName}--o11y-aks-kubelet'
+param o11yAksKubeletIdentityName string = 'tidbcloud-${deployName}-o11y-aks-kubelet'
 
 var o11yInfraResourceGroupName = '${o11yResourceGroupName}-infra'
 var o11yStorageResourceGroupName = '${o11yResourceGroupName}-storage'
