@@ -51,7 +51,7 @@ DEPLOYMENT_APP_ID=$(jq -r '.deploymentAppId' <<<"$SETUP_STATE_JSON")
 DATAPLANE_APP_ID=$(jq -r '.dataplaneAppId' <<<"$SETUP_STATE_JSON")
 DEPLOYMENT_RESOURCE_GROUP=$(jq -r '.deploymentResourceGroupName' <<<"$SETUP_STATE_JSON")
 ACR_RESOURCE_GROUP=$(jq -r '.acrResourceGroupName' <<<"$SETUP_STATE_JSON")
-ACR_CREATED_BY_SETUP=$(jq -r '.acrCreatedBySetup // true' <<<"$SETUP_STATE_JSON")
+ACR_CREATED_BY_SETUP=$(jq -r 'if has("acrCreatedBySetup") then .acrCreatedBySetup else true end' <<<"$SETUP_STATE_JSON")
 STORAGE_RESOURCE_GROUP=$(jq -r '.storageResourceGroupName' <<<"$SETUP_STATE_JSON")
 IDENTITIES_RESOURCE_GROUP=$(jq -r '.identitiesResourceGroupName' <<<"$SETUP_STATE_JSON")
 O11Y_RESOURCE_GROUP=$(jq -r '.o11yResourceGroupName' <<<"$SETUP_STATE_JSON")
@@ -64,6 +64,8 @@ AKS_ADMIN_GROUP_NAME=$(jq -r '.aksAdminGroupName' <<<"$SETUP_STATE_JSON")
 AKS_ADMIN_GROUP_OBJECT_ID=$(jq -r '.aksAdminGroupObjectId' <<<"$SETUP_STATE_JSON")
 AKS_CONTROL_PLANE_IDENTITY_NAME=$(jq -r '.aksControlPlaneIdentityName' <<<"$SETUP_STATE_JSON")
 AKS_KUBELET_IDENTITY_NAME=$(jq -r '.aksKubeletIdentityName' <<<"$SETUP_STATE_JSON")
+O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME=$(jq -r '.o11yAksControlPlaneIdentityName' <<<"$SETUP_STATE_JSON")
+O11Y_AKS_KUBELET_IDENTITY_NAME=$(jq -r '.o11yAksKubeletIdentityName' <<<"$SETUP_STATE_JSON")
 
 ensure_service_principal() {
   local app_id=$1
@@ -128,7 +130,9 @@ update_dataplane() {
 }
 update_o11y() {
   deploy_stack "$O11Y_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-o11y.bicep" \
-    deployName="$DEPLOY_NAME" location="$LOCATION" o11yResourceGroupName="$O11Y_RESOURCE_GROUP"
+    deployName="$DEPLOY_NAME" location="$LOCATION" o11yResourceGroupName="$O11Y_RESOURCE_GROUP" \
+    acrSubscriptionId="$SUBSCRIPTION_ID" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME" \
+    o11yAksControlPlaneIdentityName="$O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME" o11yAksKubeletIdentityName="$O11Y_AKS_KUBELET_IDENTITY_NAME"
 }
 update_state() {
   deploy_stack_delete_unmanaged "$STATE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-state.bicep" \
@@ -141,7 +145,8 @@ update_state() {
     acrName="$ACR_NAME" acrResourceId="$ACR_RESOURCE_ID" acrLoginServer="$ACR_LOGIN_SERVER" \
     auditLogStorageAccountName="$AUDIT_LOG_STORAGE_ACCOUNT_NAME" auditLogContainerName="$AUDIT_LOG_CONTAINER_NAME" \
     aksAdminGroupName="$AKS_ADMIN_GROUP_NAME" aksAdminGroupObjectId="$AKS_ADMIN_GROUP_OBJECT_ID" \
-    aksControlPlaneIdentityName="$AKS_CONTROL_PLANE_IDENTITY_NAME" aksKubeletIdentityName="$AKS_KUBELET_IDENTITY_NAME"
+    aksControlPlaneIdentityName="$AKS_CONTROL_PLANE_IDENTITY_NAME" aksKubeletIdentityName="$AKS_KUBELET_IDENTITY_NAME" \
+    o11yAksControlPlaneIdentityName="$O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME" o11yAksKubeletIdentityName="$O11Y_AKS_KUBELET_IDENTITY_NAME"
 }
 case "$STACK" in
   deploy) update_deploy ;;

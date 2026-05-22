@@ -33,8 +33,15 @@ param aksAdminGroupName string
 param aksAdminGroupObjectId string
 param aksControlPlaneIdentityName string
 param aksKubeletIdentityName string
+param o11yAksControlPlaneIdentityName string
+param o11yAksKubeletIdentityName string
 
 var setupStateSchemaVersion = '1'
+var o11yRegionalServerIdentityName = 'o11y-regional-server'
+var o11yVmbackupIdentityName = 'o11y-vmbackup'
+var o11yLokiIdentityName = 'o11y-loki'
+var o11yVeleroIdentityName = 'o11y-velero'
+
 output setupState object = {
   schemaVersion: setupStateSchemaVersion
   deployName: deployName
@@ -69,6 +76,8 @@ output setupState object = {
   aksAdminGroupObjectId: aksAdminGroupObjectId
   aksControlPlaneIdentityName: aksControlPlaneIdentityName
   aksKubeletIdentityName: aksKubeletIdentityName
+  o11yAksControlPlaneIdentityName: o11yAksControlPlaneIdentityName
+  o11yAksKubeletIdentityName: o11yAksKubeletIdentityName
 }
 
 output customerOnboarding object = {
@@ -89,10 +98,13 @@ output customerOnboarding object = {
   audit_log_storage_account_name: auditLogStorageAccountName
   audit_log_bucket: auditLogContainerName
   storage_accounts_resource_group: storageResourceGroupName
+  o11y_identity_resource_group: o11yResourceGroupName
   o11y_aks_resource_group: '${o11yResourceGroupName}-infra'
   o11y_storage_resource_group: '${o11yResourceGroupName}-storage'
-  o11y_identity_regional_server_resource_id: resourceId(subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-regional-server')
-  o11y_identity_vmbackup_resource_id: resourceId(subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-vmbackup')
-  o11y_identity_loki_resource_id: resourceId(subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-loki')
-  o11y_identity_velero_resource_id: resourceId(subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-velero')
+  o11y_aks_control_plane_identity_name: o11yAksControlPlaneIdentityName
+  o11y_aks_kubelet_identity_name: o11yAksKubeletIdentityName
+  o11y_regional_server_identity_name: o11yRegionalServerIdentityName
+  o11y_vmbackup_identity_name: o11yVmbackupIdentityName
+  o11y_loki_identity_name: o11yLokiIdentityName
+  o11y_velero_identity_name: o11yVeleroIdentityName
 }

@@ -3,6 +3,11 @@ targetScope = 'subscription'
 param deployName string
 param location string
 param o11yResourceGroupName string = 'rg-tidbcloud-${deployName}-o11y'
+param acrSubscriptionId string
+param acrResourceGroupName string
+param acrName string
+param o11yAksControlPlaneIdentityName string = 'tidbcloud-${deployName}-o11y-aks-control-plane'
+param o11yAksKubeletIdentityName string = 'tidbcloud-${deployName}--o11y-aks-kubelet'
 
 var o11yInfraResourceGroupName = '${o11yResourceGroupName}-infra'
 var o11yStorageResourceGroupName = '${o11yResourceGroupName}-storage'
@@ -10,16 +15,22 @@ var regionalServerIdentityResourceId = resourceId(subscription().subscriptionId,
 var vmbackupIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-vmbackup')
 var lokiIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-loki')
 var veleroIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-velero')
+var o11yAksControlPlaneIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', o11yAksControlPlaneIdentityName)
+var o11yAksKubeletIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', o11yAksKubeletIdentityName)
 
 // Azure built-in role definition IDs.
 var ownerRoleId = '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
 var networkContributorRoleId = '4d97b98b-1d4f-4787-a291-c67834d212e7'
+var managedIdentityOperatorRoleId = 'f1a07417-d97a-45cb-824c-7a7467783830'
+var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 var contributorRoleId = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 
 var ownerRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', ownerRoleId)
 var networkContributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', networkContributorRoleId)
+var managedIdentityOperatorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', managedIdentityOperatorRoleId)
+var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
 var storageBlobDataOwnerRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataOwnerRoleId)
 var storageBlobDataContributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
 var contributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', contributorRoleId)
@@ -44,6 +55,8 @@ module o11yIdentities './modules/o11y-identity-resources.bicep' = {
   scope: o11yResourceGroup
   params: {
     location: location
+    o11yAksControlPlaneIdentityName: o11yAksControlPlaneIdentityName
+    o11yAksKubeletIdentityName: o11yAksKubeletIdentityName
   }
 }
 
@@ -116,6 +129,37 @@ resource veleroContributorAssignment 'Microsoft.Authorization/roleAssignments@20
   }
 }
 
+resource o11yAksControlPlaneNetworkRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(subscription().id, o11yAksControlPlaneIdentityResourceId, networkContributorRoleDefinitionId)
+  properties: {
+    principalId: o11yIdentities.outputs.o11yAksControlPlanePrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: networkContributorRoleDefinitionId
+  }
+}
+
+module o11yAksManagedIdentityOperatorAssignment './modules/identity-role-assignment.bicep' = {
+  name: 'o11y-aks-managed-identity-operator-assignment'
+  scope: o11yResourceGroup
+  params: {
+    identityName: o11yAksKubeletIdentityName
+    principalId: o11yIdentities.outputs.o11yAksControlPlanePrincipalId
+    roleDefinitionId: managedIdentityOperatorRoleDefinitionId
+    assignmentGuidSeed: o11yAksControlPlaneIdentityResourceId
+  }
+}
+
+module o11yAksAcrPullAssignment './modules/acr-role-assignment.bicep' = {
+  name: 'o11y-aks-kubelet-acr-pull-assignment'
+  scope: resourceGroup(acrSubscriptionId, acrResourceGroupName)
+  params: {
+    acrName: acrName
+    principalId: o11yIdentities.outputs.o11yAksKubeletPrincipalId
+    roleDefinitionId: acrPullRoleDefinitionId
+    assignmentGuidSeed: o11yAksKubeletIdentityResourceId
+  }
+}
+
 output o11yResourceGroupName string = o11yResourceGroup.name
 output o11yInfraResourceGroupName string = o11yInfraResourceGroup.name
 output o11yStorageResourceGroupName string = o11yStorageResourceGroup.name
@@ -124,4 +168,6 @@ output o11yIdentityNames object = {
   vmbackup: o11yIdentities.outputs.vmbackupIdentityName
   loki: o11yIdentities.outputs.lokiIdentityName
   velero: o11yIdentities.outputs.veleroIdentityName
+  aksControlPlane: o11yIdentities.outputs.o11yAksControlPlaneIdentityName
+  aksKubelet: o11yIdentities.outputs.o11yAksKubeletIdentityName
 }

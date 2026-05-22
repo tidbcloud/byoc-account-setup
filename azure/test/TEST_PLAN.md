@@ -248,12 +248,15 @@ jq -e \
     and (.tidb_cluster_dns_domain | length > 0)
     and (.tidb_cluster_dns_resource_group | length > 0)
     and (.storage_accounts_resource_group | length > 0)
+    and (.o11y_identity_resource_group | length > 0)
     and (.o11y_aks_resource_group | length > 0)
     and (.o11y_storage_resource_group | length > 0)
-    and (.o11y_identity_regional_server_resource_id | length > 0)
-    and (.o11y_identity_vmbackup_resource_id | length > 0)
-    and (.o11y_identity_loki_resource_id | length > 0)
-    and (.o11y_identity_velero_resource_id | length > 0)
+    and (.o11y_aks_control_plane_identity_name | length > 0)
+    and (.o11y_aks_kubelet_identity_name | length > 0)
+    and (.o11y_regional_server_identity_name | length > 0)
+    and (.o11y_vmbackup_identity_name | length > 0)
+    and (.o11y_loki_identity_name | length > 0)
+    and (.o11y_velero_identity_name | length > 0)
     and (has("schema_version") | not)
     and (has("multi_tenant_app_client_id") | not)' \
   /tmp/tidbcloud-byoc-customer-onboarding.json >/dev/null
@@ -332,7 +335,14 @@ do
   az identity show --resource-group "$IDENTITIES_RESOURCE_GROUP" --name "$identity" --query "{name:name,principalId:principalId}" -o table
 done
 
-for identity in o11y-regional-server o11y-vmbackup o11y-loki o11y-velero; do
+for identity in \
+  o11y-regional-server \
+  o11y-vmbackup \
+  o11y-loki \
+  o11y-velero \
+  "$(jq -r '.o11yAksControlPlaneIdentityName' "$STATE")" \
+  "$(jq -r '.o11yAksKubeletIdentityName' "$STATE")"
+do
   az identity show --resource-group "$O11Y_RESOURCE_GROUP" --name "$identity" --query "{name:name,principalId:principalId}" -o table
 done
 ```

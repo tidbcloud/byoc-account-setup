@@ -73,6 +73,8 @@ AUDIT_LOG_STORAGE_ACCOUNT_NAME=st${audit_storage_deploy_part}auditlog
 AKS_ADMIN_GROUP_NAME=tidbcloud-${DEPLOY_NAME}-aks-admins
 AKS_CONTROL_PLANE_IDENTITY_NAME=tidbcloud-${DEPLOY_NAME}-aks-control-plane
 AKS_KUBELET_IDENTITY_NAME=tidbcloud-${DEPLOY_NAME}-aks-kubelet
+O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME=tidbcloud-${DEPLOY_NAME}-o11y-aks-control-plane
+O11Y_AKS_KUBELET_IDENTITY_NAME=tidbcloud-${DEPLOY_NAME}--o11y-aks-kubelet
 DEPLOY_STACK_NAME=cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-deploy
 INITIAL_DEPLOY_ACCESS_STACK_NAME=cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-initial-deploy-access
 DATAPLANE_STACK_NAME=cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-dataplane
@@ -185,7 +187,9 @@ deploy_stack "$DATAPLANE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-datapla
 
 echo "Creating or updating deployment stack: o11y"
 deploy_stack "$O11Y_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-o11y.bicep" \
-  deployName="$DEPLOY_NAME" location="$LOCATION" o11yResourceGroupName="$O11Y_RESOURCE_GROUP"
+  deployName="$DEPLOY_NAME" location="$LOCATION" o11yResourceGroupName="$O11Y_RESOURCE_GROUP" \
+  acrSubscriptionId="$SUBSCRIPTION_ID" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME" \
+  o11yAksControlPlaneIdentityName="$O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME" o11yAksKubeletIdentityName="$O11Y_AKS_KUBELET_IDENTITY_NAME"
 
 ACR_LOGIN_SERVER=$(az acr show --name "$ACR_NAME" --resource-group "$ACR_RESOURCE_GROUP" --query loginServer -o tsv)
 echo "Creating or updating deployment stack: state"
@@ -199,7 +203,8 @@ deploy_stack_delete_unmanaged "$STATE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-
   acrName="$ACR_NAME" acrResourceId="$ACR_RESOURCE_ID" acrLoginServer="$ACR_LOGIN_SERVER" \
   auditLogStorageAccountName="$AUDIT_LOG_STORAGE_ACCOUNT_NAME" auditLogContainerName="$AUDIT_LOG_CONTAINER_NAME" \
   aksAdminGroupName="$AKS_ADMIN_GROUP_NAME" aksAdminGroupObjectId="$AKS_ADMIN_GROUP_OBJECT_ID" \
-  aksControlPlaneIdentityName="$AKS_CONTROL_PLANE_IDENTITY_NAME" aksKubeletIdentityName="$AKS_KUBELET_IDENTITY_NAME"
+  aksControlPlaneIdentityName="$AKS_CONTROL_PLANE_IDENTITY_NAME" aksKubeletIdentityName="$AKS_KUBELET_IDENTITY_NAME" \
+  o11yAksControlPlaneIdentityName="$O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME" o11yAksKubeletIdentityName="$O11Y_AKS_KUBELET_IDENTITY_NAME"
 
 cat <<OUTPUT
 Setup complete.

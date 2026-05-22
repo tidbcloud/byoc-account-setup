@@ -110,6 +110,8 @@ The public DNS zone itself is customer-provided. Custom roles and role assignmen
 | O11Y resource groups | O11Y identity/base resource group `rg-tidbcloud-<deployName>-o11y` | Holds O11Y workload managed identities |
 | O11Y resource groups | O11Y AKS and network resource group `rg-tidbcloud-<deployName>-o11y-infra` | Holds O11Y AKS and network resources managed after setup |
 | O11Y resource groups | O11Y storage resource group `rg-tidbcloud-<deployName>-o11y-storage` | Holds O11Y storage resources managed after setup |
+| O11Y managed identities | User-assigned managed identity `tidbcloud-<deployName>-o11y-aks-control-plane` | Allows O11Y AKS to manage required Azure network resources |
+| O11Y managed identities | User-assigned managed identity `tidbcloud-<deployName>--o11y-aks-kubelet` | Allows O11Y AKS workloads to pull images |
 | O11Y managed identities | User-assigned managed identity `o11y-regional-server` | Allows O11Y regional server workloads to manage O11Y infrastructure and storage |
 | O11Y managed identities | User-assigned managed identity `o11y-vmbackup` | Allows VM backup workloads to access O11Y storage |
 | O11Y managed identities | User-assigned managed identity `o11y-loki` | Allows Loki workloads to access O11Y storage |
@@ -193,8 +195,10 @@ The setup process grants the required managed-identity roles before runtime oper
 
 ##### O11Y workload managed identities
 
-The setup creates these fixed-name customer-owned managed identities in the O11Y resource group:
+The setup creates these customer-owned managed identities in the O11Y resource group:
 
+- `tidbcloud-<deployName>-o11y-aks-control-plane`
+- `tidbcloud-<deployName>--o11y-aks-kubelet`
 - `o11y-regional-server`
 - `o11y-vmbackup`
 - `o11y-loki`
@@ -212,6 +216,9 @@ The setup grants these RBAC roles:
 
 | Identity | Scope | Azure role | Purpose |
 |---|---|---|---|
+| O11Y AKS kubelet identity | ACR | `AcrPull` | Allow O11Y AKS workloads to pull container images |
+| O11Y AKS control-plane identity | Required network scope | `Network Contributor` | Allow O11Y AKS to manage required network resources |
+| O11Y AKS control-plane identity | O11Y AKS kubelet identity | `Managed Identity Operator` | Required by Azure AKS when using a pre-created kubelet identity |
 | `o11y-regional-server` | O11Y AKS/network resource group | `Owner` | Manage O11Y AKS and infrastructure resources |
 | `o11y-regional-server` | O11Y AKS/network resource group | `Network Contributor` | Manage O11Y network resources |
 | `o11y-regional-server` | O11Y storage resource group | `Owner` | Manage O11Y storage resources |
