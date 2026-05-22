@@ -21,6 +21,7 @@ Required:
 Optional:
   --acr-resource-group <name>             Default: rg-tidbcloud-<deploy-name>-acr
   --acr-name <name>                       Default: deterministic tidbcloud<deploy-name>acr name
+  --reuse-acr                             Reuse an existing ACR instead of creating one in the deploy stack
   -h, --help                              Show this help message
 USAGE
   exit "${1:-1}"
@@ -29,7 +30,7 @@ USAGE
 require_arg() { [[ $# -ge 2 && "${2-}" != -* ]] || { echo "Error: $1 requires a value"; usage; }; }
 
 DEPLOY_NAME=""; LOCATION=""; TENANT_ID=""; SUBSCRIPTION_ID=""; DNS_ZONE_SUBSCRIPTION_ID=""; DNS_ZONE_RESOURCE_GROUP=""; DNS_ZONE_ROOT_DOMAIN=""; DEPLOYMENT_APP_ID=""; DATAPLANE_APP_ID=""
-ACR_RESOURCE_GROUP=""; ACR_NAME=""; AUDIT_LOG_CONTAINER_NAME="audit-log"
+ACR_RESOURCE_GROUP=""; ACR_NAME=""; AUDIT_LOG_CONTAINER_NAME="audit-log"; REUSE_ACR=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -44,6 +45,7 @@ while [[ $# -gt 0 ]]; do
     --dataplane-app-id) require_arg "$@"; DATAPLANE_APP_ID="$2"; shift 2 ;;
     --acr-resource-group) require_arg "$@"; ACR_RESOURCE_GROUP="$2"; shift 2 ;;
     --acr-name) require_arg "$@"; ACR_NAME="$2"; shift 2 ;;
+    --reuse-acr) REUSE_ACR=true; shift ;;
     -h|--help) usage 0 ;;
     *) echo "Error: unknown option '$1'"; usage ;;
   esac
@@ -130,6 +132,15 @@ DATAPLANE_SP_OBJECT_ID=$(ensure_service_principal "$DATAPLANE_APP_ID")
 AKS_ADMIN_GROUP_OBJECT_ID=$(ensure_group "$AKS_ADMIN_GROUP_NAME")
 ensure_group_member "$AKS_ADMIN_GROUP_OBJECT_ID" "$DATAPLANE_SP_OBJECT_ID"
 
+CREATE_ACR=true
+if [[ "$REUSE_ACR" == "true" ]]; then
+  CREATE_ACR=false
+  if ! az acr show --name "$ACR_NAME" --resource-group "$ACR_RESOURCE_GROUP" >/dev/null 2>&1; then
+    echo "Error: --reuse-acr was set, but ACR '$ACR_NAME' was not found in resource group '$ACR_RESOURCE_GROUP'." >&2
+    exit 1
+  fi
+fi
+
 deploy_stack() {
   local name=$1 template=$2; shift 2
   az stack sub create \
@@ -156,7 +167,7 @@ deploy_stack_delete_unmanaged() {
 
 echo "Creating or updating deployment stack: deploy"
 deploy_stack "$DEPLOY_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-deploy.bicep" \
-  deployName="$DEPLOY_NAME" location="$LOCATION" deploymentPrincipalObjectId="$DEPLOYMENT_SP_OBJECT_ID" deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME"
+  deployName="$DEPLOY_NAME" location="$LOCATION" deploymentPrincipalObjectId="$DEPLOYMENT_SP_OBJECT_ID" deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME" createAcr="$CREATE_ACR"
 
 echo "Creating or updating deployment stack: initial deploy access"
 deploy_stack_delete_unmanaged "$INITIAL_DEPLOY_ACCESS_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-initial-deploy-access.bicep" \
@@ -182,7 +193,7 @@ deploy_stack_delete_unmanaged "$STATE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-
   deployName="$DEPLOY_NAME" location="$LOCATION" tenantId="$TENANT_ID" subscriptionId="$SUBSCRIPTION_ID" \
   dnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" dnsZoneResourceGroupName="$DNS_ZONE_RESOURCE_GROUP" dnsZoneName="$DNS_ZONE_ROOT_DOMAIN" \
   deploymentAppId="$DEPLOYMENT_APP_ID" dataplaneAppId="$DATAPLANE_APP_ID" \
-  deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" storageResourceGroupName="$STORAGE_RESOURCE_GROUP" identitiesResourceGroupName="$IDENTITIES_RESOURCE_GROUP" \
+  deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrCreatedBySetup="$CREATE_ACR" storageResourceGroupName="$STORAGE_RESOURCE_GROUP" identitiesResourceGroupName="$IDENTITIES_RESOURCE_GROUP" \
   o11yResourceGroupName="$O11Y_RESOURCE_GROUP" \
   deployStackName="$DEPLOY_STACK_NAME" initialDeployAccessStackName="$INITIAL_DEPLOY_ACCESS_STACK_NAME" dataplaneStackName="$DATAPLANE_STACK_NAME" o11yStackName="$O11Y_STACK_NAME" stateStackName="$STATE_STACK_NAME" \
   acrName="$ACR_NAME" acrResourceId="$ACR_RESOURCE_ID" acrLoginServer="$ACR_LOGIN_SERVER" \

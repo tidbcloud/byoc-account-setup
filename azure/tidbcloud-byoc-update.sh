@@ -51,6 +51,7 @@ DEPLOYMENT_APP_ID=$(jq -r '.deploymentAppId' <<<"$SETUP_STATE_JSON")
 DATAPLANE_APP_ID=$(jq -r '.dataplaneAppId' <<<"$SETUP_STATE_JSON")
 DEPLOYMENT_RESOURCE_GROUP=$(jq -r '.deploymentResourceGroupName' <<<"$SETUP_STATE_JSON")
 ACR_RESOURCE_GROUP=$(jq -r '.acrResourceGroupName' <<<"$SETUP_STATE_JSON")
+ACR_CREATED_BY_SETUP=$(jq -r '.acrCreatedBySetup // true' <<<"$SETUP_STATE_JSON")
 STORAGE_RESOURCE_GROUP=$(jq -r '.storageResourceGroupName' <<<"$SETUP_STATE_JSON")
 IDENTITIES_RESOURCE_GROUP=$(jq -r '.identitiesResourceGroupName' <<<"$SETUP_STATE_JSON")
 O11Y_RESOURCE_GROUP=$(jq -r '.o11yResourceGroupName' <<<"$SETUP_STATE_JSON")
@@ -106,7 +107,7 @@ update_deploy() {
   local deployment_sp_object_id
   deployment_sp_object_id=$(ensure_service_principal "$DEPLOYMENT_APP_ID")
   deploy_stack "$DEPLOY_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-deploy.bicep" \
-    deployName="$DEPLOY_NAME" location="$LOCATION" deploymentPrincipalObjectId="$deployment_sp_object_id" deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME"
+    deployName="$DEPLOY_NAME" location="$LOCATION" deploymentPrincipalObjectId="$deployment_sp_object_id" deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME" createAcr="$ACR_CREATED_BY_SETUP"
 }
 update_initial_deploy_access() {
   local deployment_sp_object_id
@@ -134,7 +135,7 @@ update_state() {
     deployName="$DEPLOY_NAME" location="$LOCATION" tenantId="$TENANT_ID" subscriptionId="$SUBSCRIPTION_ID" \
     dnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" dnsZoneResourceGroupName="$DNS_ZONE_RESOURCE_GROUP" dnsZoneName="$DNS_ZONE_ROOT_DOMAIN" \
     deploymentAppId="$DEPLOYMENT_APP_ID" dataplaneAppId="$DATAPLANE_APP_ID" \
-    deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" storageResourceGroupName="$STORAGE_RESOURCE_GROUP" identitiesResourceGroupName="$IDENTITIES_RESOURCE_GROUP" \
+    deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrCreatedBySetup="$ACR_CREATED_BY_SETUP" storageResourceGroupName="$STORAGE_RESOURCE_GROUP" identitiesResourceGroupName="$IDENTITIES_RESOURCE_GROUP" \
     o11yResourceGroupName="$O11Y_RESOURCE_GROUP" \
     deployStackName="$DEPLOY_STACK_NAME" initialDeployAccessStackName="$INITIAL_DEPLOY_ACCESS_STACK_NAME" dataplaneStackName="$DATAPLANE_STACK_NAME" o11yStackName="$O11Y_STACK_NAME" stateStackName="$STATE_STACK_NAME" \
     acrName="$ACR_NAME" acrResourceId="$ACR_RESOURCE_ID" acrLoginServer="$ACR_LOGIN_SERVER" \

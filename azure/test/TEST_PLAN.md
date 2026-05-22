@@ -228,6 +228,7 @@ jq -e \
     and .dnsZoneName == $dns_zone_root_domain
     and .deploymentAppId == $deployment_app_id
     and .dataplaneAppId == $dataplane_app_id
+    and (.acrCreatedBySetup | type == "boolean")
     and (.stateStackName | length > 0)' \
   /tmp/tidbcloud-byoc-setup-state.json >/dev/null
 
@@ -758,6 +759,7 @@ Run the full plan for at least these variants:
 | DNS zone in separate subscription | Yes | Validates cross-subscription DNS RBAC |
 | Default generated ACR names | Yes | Validates deterministic naming |
 | Custom ACR resource group and name | Yes | Add `--acr-resource-group` and `--acr-name` to setup |
+| Reused existing ACR | Yes | Add `--acr-resource-group`, `--acr-name`, and `--reuse-acr`; verify the deploy stack does not manage the ACR resource group or registry, onboarding still contains ACR fields, and reset never deletes the reused ACR |
 | Re-run setup after initial access revoke | Yes | Setup should recreate temporary access |
 | Revoke app access with `--keep-enterprise-apps` | Yes | Shared enterprise app scenario |
 | Revoke app access without `--keep-enterprise-apps` | Optional | Isolated tenant only |

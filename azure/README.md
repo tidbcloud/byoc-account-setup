@@ -88,7 +88,7 @@ The public DNS zone itself is customer-provided. Custom roles and role assignmen
 
 | Category | Resource created or reconciled | Why it is needed |
 |---|---|---|
-| Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-deploy` | Manages deployment resource group, ACR resource group, and ACR |
+| Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-deploy` | Manages deployment resource group, deployment application ACR access, and the ACR only when setup creates it |
 | Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-initial-deploy-access` | Manages temporary initial deployment access resources |
 | Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-dataplane` | Manages dataplane resource groups, identities, and audit storage |
 | Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-o11y` | Manages O11Y resource groups and identities |
@@ -98,10 +98,10 @@ The public DNS zone itself is customer-provided. Custom roles and role assignmen
 | Microsoft Entra ID | Group `tidbcloud-<deployName>-aks-admins` | Grants dataplane management AKS administrator access |
 | Microsoft Entra ID | Dataplane management application membership in `tidbcloud-<deployName>-aks-admins` | Allows the dataplane management application to administer BYOC AKS clusters |
 | Resource groups | Deployment resource group `rg-tidbcloud-<deployName>-deploy` | Holds deployment-related customer resources reserved for setup and operations |
-| Resource groups | ACR resource group `rg-tidbcloud-<deployName>-acr` | Holds the customer Azure Container Registry |
+| Resource groups | ACR resource group `rg-tidbcloud-<deployName>-acr`, or the provided existing ACR resource group | Holds the customer Azure Container Registry |
 | Resource groups | Dataplane storage resource group `rg-tidbcloud-<deployName>-storage` | Holds setup-created dataplane storage resources |
 | Resource groups | Dataplane identities resource group `rg-tidbcloud-<deployName>-identities` | Holds dataplane user-assigned managed identities |
-| Container registry | Azure Container Registry `tidbcloud<alphanumeric-deployName>acr`, or the provided ACR name | Stores container images used by TiDB Cloud components |
+| Container registry | Azure Container Registry `tidbcloud<alphanumeric-deployName>acr`, or the provided ACR name | Stores container images used by TiDB Cloud components. Existing registries are referenced but not created or managed when `--reuse-acr` is used |
 | Dataplane storage | Audit log storage account `st<last-12-alphanumeric-characters-of-deployName>auditlog` | Stores audit logs for TiDB Cloud control-plane operations on the dataplane |
 | Dataplane storage | Default blob service on the audit log storage account | Enables blob container management on the audit log storage account |
 | Dataplane storage | Audit log blob container `audit-log` | Stores audit log objects with public access disabled |
@@ -235,7 +235,7 @@ Prepare the following values before running the scripts:
 | Deployment application ID | Multi-tenant application ID provided by PingCAP |
 | Dataplane management application ID | Multi-tenant application ID provided by PingCAP |
 
-If optional resource names are not provided, the setup script uses deterministic names based on `deployName`. The ACR is created in a separate resource group, `rg-tidbcloud-<deployName>-acr`. For the audit log storage account, the script uses `st<last-12-alphanumeric-characters-of-deployName>auditlog` to stay within Azure's 24-character storage account name limit.
+If optional resource names are not provided, the setup script uses deterministic names based on `deployName`. By default, the ACR is created in a separate resource group, `rg-tidbcloud-<deployName>-acr`. To reuse an existing ACR, pass `--reuse-acr` with `--acr-resource-group` and `--acr-name`; the setup records the ACR in onboarding state and grants required access, but does not create or manage the ACR resource group or registry in the deploy stack. For the audit log storage account, the script uses `st<last-12-alphanumeric-characters-of-deployName>auditlog` to stay within Azure's 24-character storage account name limit.
 
 ### Run the scripts
 
@@ -252,6 +252,24 @@ bash tidbcloud-byoc-setup.sh \
   --dns-zone-root-domain <rootDomainOfDNSZone> \
   --deployment-app-id <deploymentApplicationId> \
   --dataplane-app-id <dataplaneManagementApplicationId>
+```
+
+To reuse an existing ACR instead of creating one:
+
+```bash
+bash tidbcloud-byoc-setup.sh \
+  --deploy-name <deployName> \
+  --location <azureRegion> \
+  --tenant-id <tenantId> \
+  --subscription-id <subscriptionId> \
+  --dns-zone-subscription-id <subscriptionIdOfDNSZone> \
+  --dns-zone-resource-group <resourceGroupOfDNSZone> \
+  --dns-zone-root-domain <rootDomainOfDNSZone> \
+  --deployment-app-id <deploymentApplicationId> \
+  --dataplane-app-id <dataplaneManagementApplicationId> \
+  --acr-resource-group <existingAcrResourceGroup> \
+  --acr-name <existingAcrName> \
+  --reuse-acr
 ```
 
 The script is idempotent for the initial onboarding flow. Running it again reconciles the full setup, including temporary initial deployment access. If you already revoked that temporary access after the first deployment, re-running setup will recreate it. Revoke it again after the deployment or recovery operation completes.
@@ -341,7 +359,8 @@ This deletes setup-managed deployment stacks, resource groups, role assignments,
 
 It does not delete:
 
-- the ACR resource group and ACR, unless you add `--delete-acr`;
+- the setup-created ACR resource group and ACR, unless you add `--delete-acr`;
+- a reused ACR resource group and ACR, even if you add `--delete-acr`;
 - the customer-prepared public DNS zone;
 - PingCAP enterprise applications, unless you add `--delete-enterprise-apps`.
 

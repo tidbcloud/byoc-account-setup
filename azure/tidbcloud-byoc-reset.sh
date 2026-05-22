@@ -75,6 +75,7 @@ DATAPLANE_STACK_NAME=$(jq -r --arg fallback "$(stack_name dataplane)" '.dataplan
 O11Y_STACK_NAME=$(jq -r --arg fallback "$(stack_name o11y)" '.o11yStackName // $fallback' <<<"$SETUP_STATE_JSON")
 DEPLOYMENT_RESOURCE_GROUP=$(jq -r '.deploymentResourceGroupName' <<<"$SETUP_STATE_JSON")
 ACR_RESOURCE_GROUP=$(jq -r '.acrResourceGroupName' <<<"$SETUP_STATE_JSON")
+ACR_CREATED_BY_SETUP=$(jq -r '.acrCreatedBySetup // true' <<<"$SETUP_STATE_JSON")
 ACR_RESOURCE_ID=$(jq -r '.acrResourceId' <<<"$SETUP_STATE_JSON")
 AKS_ADMIN_GROUP_OBJECT_ID=$(jq -r '.aksAdminGroupObjectId // empty' <<<"$SETUP_STATE_JSON")
 DEPLOYMENT_APP_ID=$(jq -r '.deploymentAppId // empty' <<<"$SETUP_STATE_JSON")
@@ -162,6 +163,7 @@ Microsoft Entra group:
 
 Enterprise applications:
   deleteAcr: ${DELETE_ACR}
+  acrCreatedBySetup: ${ACR_CREATED_BY_SETUP}
   deleteEnterpriseApps: ${DELETE_ENTERPRISE_APPS}
   deploymentAppId: ${DEPLOYMENT_APP_ID:-<none>}
   dataplaneAppId: ${DATAPLANE_APP_ID:-<none>}
@@ -173,7 +175,10 @@ delete_stack_if_exists "$INITIAL_DEPLOY_ACCESS_STACK_NAME"
 delete_stack_if_exists "$DATAPLANE_STACK_NAME"
 delete_stack_if_exists "$O11Y_STACK_NAME"
 
-if [[ "$DELETE_ACR" == "true" ]]; then
+if [[ "$ACR_CREATED_BY_SETUP" != "true" ]]; then
+  delete_stack_if_exists "$DEPLOY_STACK_NAME" deleteAll
+  echo "Keeping reused ACR because it was not created by setup."
+elif [[ "$DELETE_ACR" == "true" ]]; then
   delete_stack_if_exists "$DEPLOY_STACK_NAME" deleteAll
 else
   delete_stack_if_exists "$DEPLOY_STACK_NAME" detachAll
@@ -183,7 +188,7 @@ else
   else
     echo "Deployment resource group is the ACR resource group; keeping it because --delete-acr was not set."
   fi
-  echo "Keeping ACR resource group and ACR. Use --delete-acr to remove them during test reset."
+  echo "Keeping setup-created ACR resource group and ACR. Use --delete-acr to remove them during test reset."
 fi
 
 delete_stack_if_exists "$STATE_STACK_NAME"

@@ -15,6 +15,7 @@ param deploymentAppId string
 param dataplaneAppId string
 param deploymentResourceGroupName string
 param acrResourceGroupName string
+param acrCreatedBySetup bool = true
 param storageResourceGroupName string
 param identitiesResourceGroupName string
 param o11yResourceGroupName string
@@ -47,6 +48,7 @@ output setupState object = {
   dataplaneAppId: dataplaneAppId
   deploymentResourceGroupName: deploymentResourceGroupName
   acrResourceGroupName: acrResourceGroupName
+  acrCreatedBySetup: acrCreatedBySetup
   storageResourceGroupName: storageResourceGroupName
   identitiesResourceGroupName: identitiesResourceGroupName
   o11yResourceGroupName: o11yResourceGroupName
