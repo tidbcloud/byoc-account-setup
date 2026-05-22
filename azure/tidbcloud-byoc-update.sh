@@ -64,8 +64,8 @@ AKS_ADMIN_GROUP_NAME=$(jq -r '.aksAdminGroupName' <<<"$SETUP_STATE_JSON")
 AKS_ADMIN_GROUP_OBJECT_ID=$(jq -r '.aksAdminGroupObjectId' <<<"$SETUP_STATE_JSON")
 AKS_CONTROL_PLANE_IDENTITY_NAME=$(jq -r '.aksControlPlaneIdentityName' <<<"$SETUP_STATE_JSON")
 AKS_KUBELET_IDENTITY_NAME=$(jq -r '.aksKubeletIdentityName' <<<"$SETUP_STATE_JSON")
-O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME=$(jq -r '.o11yAksControlPlaneIdentityName' <<<"$SETUP_STATE_JSON")
-O11Y_AKS_KUBELET_IDENTITY_NAME=$(jq -r '.o11yAksKubeletIdentityName' <<<"$SETUP_STATE_JSON")
+O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME=$(jq -r --arg fallback "tidbcloud-${DEPLOY_NAME}-o11y-aks-control-plane" 'if has("o11yAksControlPlaneIdentityName") and .o11yAksControlPlaneIdentityName != null then .o11yAksControlPlaneIdentityName else $fallback end' <<<"$SETUP_STATE_JSON")
+O11Y_AKS_KUBELET_IDENTITY_NAME=$(jq -r --arg fallback "tidbcloud-${DEPLOY_NAME}--o11y-aks-kubelet" 'if has("o11yAksKubeletIdentityName") and .o11yAksKubeletIdentityName != null then .o11yAksKubeletIdentityName else $fallback end' <<<"$SETUP_STATE_JSON")
 
 ensure_service_principal() {
   local app_id=$1
@@ -99,11 +99,11 @@ ensure_group_member() {
 
 deploy_stack() {
   local name=$1 template=$2; shift 2
-  az stack sub create --name "$name" --location "$LOCATION" --template-file "$template" --action-on-unmanage detachAll --deny-settings-mode none --output none --parameters "$@"
+  az stack sub create --name "$name" --location "$LOCATION" --template-file "$template" --action-on-unmanage detachAll --deny-settings-mode none --yes --output none --parameters "$@"
 }
 deploy_stack_delete_unmanaged() {
   local name=$1 template=$2; shift 2
-  az stack sub create --name "$name" --location "$LOCATION" --template-file "$template" --action-on-unmanage deleteAll --deny-settings-mode none --output none --parameters "$@"
+  az stack sub create --name "$name" --location "$LOCATION" --template-file "$template" --action-on-unmanage deleteAll --deny-settings-mode none --yes --output none --parameters "$@"
 }
 update_deploy() {
   local deployment_sp_object_id
