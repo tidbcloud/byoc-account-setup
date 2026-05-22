@@ -64,7 +64,7 @@ AKS_ADMIN_GROUP_NAME=$(jq -r '.aksAdminGroupName' <<<"$SETUP_STATE_JSON")
 AKS_ADMIN_GROUP_OBJECT_ID=$(jq -r '.aksAdminGroupObjectId' <<<"$SETUP_STATE_JSON")
 AKS_CONTROL_PLANE_IDENTITY_NAME=$(jq -r '.aksControlPlaneIdentityName' <<<"$SETUP_STATE_JSON")
 AKS_KUBELET_IDENTITY_NAME=$(jq -r '.aksKubeletIdentityName' <<<"$SETUP_STATE_JSON")
-O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME=$(jq -r --arg fallback "tidbcloud-${DEPLOY_NAME}-o11y-aks-control-plane" 'if has("o11yAksControlPlaneIdentityName") and .o11yAksControlPlaneIdentityName != null then .o11yAksControlPlaneIdentityName else $fallback end' <<<"$SETUP_STATE_JSON")
+O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME=tidbcloud-${DEPLOY_NAME}-o11y-aks-control-plane
 O11Y_AKS_KUBELET_IDENTITY_NAME=tidbcloud-${DEPLOY_NAME}-o11y-aks-kubelet
 
 ensure_service_principal() {
