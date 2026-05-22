@@ -9,6 +9,37 @@ After you complete this guide, TiDB Cloud can:
 - manage observability components required by TiDB Cloud;
 - create DNS records for TiDB cluster endpoints in the DNS zone you provide.
 
+## Setup overview
+
+The setup has two main steps:
+
+1. Prepare one Azure subscription and one public DNS zone.
+2. Run the PingCAP-provided setup scripts.
+
+The scripts create the resources TiDB Cloud needs, including deployment stacks, resource groups, managed identities, an ACR for image synchronization, and Blob Storage for audit logs.
+
+The scripts also grant the required access:
+
+```text
+PingCAP / TiDB Cloud applications
+  |
+  +-- Deployment application
+  |     +-- temporary subscription access for initial deployment
+  |     |     (can be revoked after the first BYOC deployment)
+  |     +-- ACR access for image synchronization
+  |
+  +-- Dataplane management application
+        +-- static RBAC access to manage and upgrade dataplane resources
+        +-- DNS record access for TiDB cluster endpoints
+
+Customer-owned managed identities
+  |
+  +-- Dataplane AKS identities -> customer-side dataplane resources
+  +-- O11Y identities          -> customer-side observability resources
+```
+
+Ongoing management uses static Azure RBAC permissions and does not grant TiDB Cloud permission to create new role assignments dynamically.
+
 ## What you need to do
 
 1. Prepare one Azure subscription for TiDB Cloud BYOC workloads.
