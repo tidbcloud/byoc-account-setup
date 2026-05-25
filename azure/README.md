@@ -230,6 +230,7 @@ The setup creates these customer-owned managed identities in the O11Y resource g
 
 - `tidbcloud-<deployName>-o11y-aks-control-plane`
 - `tidbcloud-<deployName>-o11y-aks-kubelet`
+- `o11y-agic`
 - `o11y-regional-server`
 - `o11y-vmbackup`
 - `o11y-loki`
@@ -250,6 +251,7 @@ The setup grants these RBAC roles:
 | O11Y AKS kubelet identity | ACR | `AcrPull` | Allow O11Y AKS workloads to pull container images |
 | O11Y AKS control-plane identity | Required network scope | `Network Contributor` | Allow O11Y AKS to manage required network resources |
 | O11Y AKS control-plane identity | O11Y AKS kubelet identity | `Managed Identity Operator` | Required by Azure AKS when using a pre-created kubelet identity |
+| O11Y AGIC identity | O11Y AKS/network resource group | Custom `TiDB BYOC O11Y AGIC Operator - <deployName>` | Manage the O11Y Application Gateway and read related network resources for ingress reconciliation |
 | `o11y-regional-server` | O11Y AKS/network resource group | `Owner` | Manage O11Y AKS and infrastructure resources |
 | `o11y-regional-server` | O11Y AKS/network resource group | `Network Contributor` | Manage O11Y network resources |
 | `o11y-regional-server` | O11Y storage resource group | `Owner` | Manage O11Y storage resources |

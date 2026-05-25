@@ -8,6 +8,7 @@ param acrResourceGroupName string
 param acrName string
 param o11yAksControlPlaneIdentityName string = 'tidbcloud-${deployName}-o11y-aks-control-plane'
 param o11yAksKubeletIdentityName string = 'tidbcloud-${deployName}-o11y-aks-kubelet'
+param o11yAgicRoleName string = 'TiDB BYOC O11Y AGIC Operator - ${deployName}'
 
 var o11yInfraResourceGroupName = '${o11yResourceGroupName}-infra'
 var o11yStorageResourceGroupName = '${o11yResourceGroupName}-storage'
@@ -15,6 +16,7 @@ var regionalServerIdentityResourceId = resourceId(subscription().subscriptionId,
 var vmbackupIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-vmbackup')
 var lokiIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-loki')
 var veleroIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-velero')
+var agicIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', 'o11y-agic')
 var o11yAksControlPlaneIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', o11yAksControlPlaneIdentityName)
 var o11yAksKubeletIdentityResourceId = resourceId(subscription().subscriptionId, o11yResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', o11yAksKubeletIdentityName)
 
@@ -55,6 +57,16 @@ module o11yIdentities './modules/o11y-identity-resources.bicep' = {
     location: location
     o11yAksControlPlaneIdentityName: o11yAksControlPlaneIdentityName
     o11yAksKubeletIdentityName: o11yAksKubeletIdentityName
+  }
+}
+
+module o11yAgicRoleAssignment './modules/o11y-agic-role-assignment.bicep' = {
+  name: 'o11y-agic-role-assignment'
+  scope: o11yInfraResourceGroup
+  params: {
+    roleName: o11yAgicRoleName
+    principalId: o11yIdentities.outputs.o11yAgicPrincipalId
+    assignmentGuidSeed: agicIdentityResourceId
   }
 }
 
@@ -169,4 +181,5 @@ output o11yIdentityNames object = {
   velero: o11yIdentities.outputs.veleroIdentityName
   aksControlPlane: o11yIdentities.outputs.o11yAksControlPlaneIdentityName
   aksKubelet: o11yIdentities.outputs.o11yAksKubeletIdentityName
+  agic: o11yIdentities.outputs.o11yAgicIdentityName
 }

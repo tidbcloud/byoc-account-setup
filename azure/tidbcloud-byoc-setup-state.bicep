@@ -41,6 +41,7 @@ var o11yRegionalServerIdentityName = 'o11y-regional-server'
 var o11yVmbackupIdentityName = 'o11y-vmbackup'
 var o11yLokiIdentityName = 'o11y-loki'
 var o11yVeleroIdentityName = 'o11y-velero'
+var o11yAgicIdentityName = 'o11y-agic'
 
 output setupState object = {
   schemaVersion: setupStateSchemaVersion
@@ -78,6 +79,7 @@ output setupState object = {
   aksKubeletIdentityName: aksKubeletIdentityName
   o11yAksControlPlaneIdentityName: o11yAksControlPlaneIdentityName
   o11yAksKubeletIdentityName: o11yAksKubeletIdentityName
+  o11yAgicIdentityName: o11yAgicIdentityName
 }
 
 output customerOnboarding object = {
@@ -103,6 +105,7 @@ output customerOnboarding object = {
   o11y_storage_resource_group: '${o11yResourceGroupName}-storage'
   o11y_aks_control_plane_identity_name: o11yAksControlPlaneIdentityName
   o11y_aks_kubelet_identity_name: o11yAksKubeletIdentityName
+  o11y_agic_identity_name: o11yAgicIdentityName
   o11y_regional_server_identity_name: o11yRegionalServerIdentityName
   o11y_vmbackup_identity_name: o11yVmbackupIdentityName
   o11y_loki_identity_name: o11yLokiIdentityName

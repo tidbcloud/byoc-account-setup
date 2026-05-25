@@ -511,11 +511,13 @@ Pass criteria:
 - Dataplane app has DNS record custom role at the public DNS zone scope, in the public DNS zone subscription.
 - Dataplane app is a member of the AKS admin group.
 - `o11y-velero` has `Storage Blob Data Contributor` at the O11Y storage resource group scope.
+- `o11y-agic` has the custom O11Y AGIC operator role at the O11Y AKS/network resource group scope.
 - Custom roles do not include role assignment write/delete.
 - Dataplane custom role uses explicit storage account, container, and lifecycle management actions without storage wildcards.
 - Dataplane custom role has blob read DataAction only with a subscription role-assignment condition that allows `Blob.List` and denies blob content reads.
 - Dataplane custom role does not include public DNS zone actions or copied `DNS Zone Contributor` support actions.
 - Dataplane DNS record custom role includes only DNS zone read and DNS A record read/write/delete actions.
+- O11Y AGIC custom role includes Application Gateway management actions plus read-only supporting network actions, and does not grant broad `Contributor`.
 
 ## 5. Idempotency
 

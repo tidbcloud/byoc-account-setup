@@ -32,6 +32,11 @@ resource o11yAksKubeletIdentity 'Microsoft.ManagedIdentity/userAssignedIdentitie
   location: location
 }
 
+resource o11yAgicIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'o11y-agic'
+  location: location
+}
+
 output regionalServerIdentityName string = regionalServerIdentity.name
 output regionalServerIdentityId string = regionalServerIdentity.id
 output regionalServerPrincipalId string = regionalServerIdentity.properties.principalId
@@ -61,3 +66,8 @@ output o11yAksKubeletIdentityName string = o11yAksKubeletIdentity.name
 output o11yAksKubeletIdentityId string = o11yAksKubeletIdentity.id
 output o11yAksKubeletPrincipalId string = o11yAksKubeletIdentity.properties.principalId
 output o11yAksKubeletClientId string = o11yAksKubeletIdentity.properties.clientId
+
+output o11yAgicIdentityName string = o11yAgicIdentity.name
+output o11yAgicIdentityId string = o11yAgicIdentity.id
+output o11yAgicPrincipalId string = o11yAgicIdentity.properties.principalId
+output o11yAgicClientId string = o11yAgicIdentity.properties.clientId
