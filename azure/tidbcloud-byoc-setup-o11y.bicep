@@ -25,7 +25,6 @@ var managedIdentityOperatorRoleId = 'f1a07417-d97a-45cb-824c-7a7467783830'
 var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-var contributorRoleId = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 
 var ownerRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', ownerRoleId)
 var networkContributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', networkContributorRoleId)
@@ -33,7 +32,6 @@ var managedIdentityOperatorRoleDefinitionId = subscriptionResourceId('Microsoft.
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
 var storageBlobDataOwnerRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataOwnerRoleId)
 var storageBlobDataContributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
-var contributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', contributorRoleId)
 
 resource o11yResourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: o11yResourceGroupName
@@ -120,12 +118,13 @@ module lokiStorageBlobDataContributorAssignment './modules/resource-group-role-a
   }
 }
 
-resource veleroContributorAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(subscription().id, veleroIdentityResourceId, contributorRoleDefinitionId)
-  properties: {
+module veleroStorageBlobDataContributorAssignment './modules/resource-group-role-assignment.bicep' = {
+  name: 'o11y-velero-storage-blob-contributor'
+  scope: o11yStorageResourceGroup
+  params: {
     principalId: o11yIdentities.outputs.veleroPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: contributorRoleDefinitionId
+    roleDefinitionId: storageBlobDataContributorRoleDefinitionId
+    assignmentGuidSeed: veleroIdentityResourceId
   }
 }
 

@@ -146,7 +146,7 @@ The public DNS zone itself is customer-provided. Custom roles and role assignmen
 | O11Y managed identities | User-assigned managed identity `o11y-regional-server` | Allows O11Y regional server workloads to manage O11Y infrastructure and storage |
 | O11Y managed identities | User-assigned managed identity `o11y-vmbackup` | Allows VM backup workloads to access O11Y storage |
 | O11Y managed identities | User-assigned managed identity `o11y-loki` | Allows Loki workloads to access O11Y storage |
-| O11Y managed identities | User-assigned managed identity `o11y-velero` | Allows Velero workloads to manage backup and restore resources |
+| O11Y managed identities | User-assigned managed identity `o11y-velero` | Allows Velero workloads to access O11Y backup storage |
 
 ### Privileges granted during setup
 
@@ -256,7 +256,7 @@ The setup grants these RBAC roles:
 | `o11y-regional-server` | O11Y storage resource group | `Storage Blob Data Owner` | Manage O11Y blob data |
 | `o11y-vmbackup` | O11Y storage resource group | `Storage Blob Data Contributor` | Read and write VM backup blob data |
 | `o11y-loki` | O11Y storage resource group | `Storage Blob Data Contributor` | Read and write Loki blob data |
-| `o11y-velero` | BYOC subscription | `Contributor` | Manage backup and restore resources |
+| `o11y-velero` | O11Y storage resource group | `Storage Blob Data Contributor` | Read and write Velero backup blob data |
 
 ### Script inputs
 
