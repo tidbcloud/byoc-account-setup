@@ -217,12 +217,10 @@ The setup process grants the required managed-identity roles before runtime oper
 
 ##### Dataplane managed identities
 
-| Identity | Scope | Azure role | Purpose |
-|---|---|---|---|
-| Dataplane AKS kubelet identity | ACR | `AcrPull` | Allow AKS workloads to pull container images |
-| Dataplane AKS kubelet identity | BYOC subscription | `Storage Blob Data Owner` | Allow dataplane workloads to access Azure Blob Storage |
-| Dataplane AKS control-plane identity | Required network scope | `Network Contributor` | Allow AKS to manage required network resources |
-| Dataplane AKS control-plane identity | Kubelet identity | `Managed Identity Operator` | Required by Azure AKS when using a pre-created kubelet identity |
+| Identity | Access granted | Purpose |
+|---|---|---|
+| Dataplane AKS kubelet identity | ACR: `AcrPull`; BYOC subscription: `Storage Blob Data Owner` | Allow AKS workloads to pull container images and dataplane workloads to access Azure Blob Storage |
+| Dataplane AKS control-plane identity | Required network scope: `Network Contributor`; kubelet identity: `Managed Identity Operator` | Allow AKS to manage required network resources and use the pre-created kubelet identity |
 
 ##### O11Y workload managed identities
 
@@ -246,19 +244,15 @@ No separate O11Y resource group input is required. The setup derives O11Y resour
 
 The setup grants these RBAC roles:
 
-| Identity | Scope | Azure role | Purpose |
-|---|---|---|---|
-| O11Y AKS kubelet identity | ACR | `AcrPull` | Allow O11Y AKS workloads to pull container images |
-| O11Y AKS control-plane identity | Required network scope | `Network Contributor` | Allow O11Y AKS to manage required network resources |
-| O11Y AKS control-plane identity | O11Y AKS kubelet identity | `Managed Identity Operator` | Required by Azure AKS when using a pre-created kubelet identity |
-| O11Y AGIC identity | O11Y AKS/network resource group | Custom `TiDB BYOC O11Y AGIC Operator - <deployName>` | Manage the O11Y Application Gateway and read related network resources for ingress reconciliation |
-| `o11y-regional-server` | O11Y AKS/network resource group | `Owner` | Manage O11Y AKS and infrastructure resources |
-| `o11y-regional-server` | O11Y AKS/network resource group | `Network Contributor` | Manage O11Y network resources |
-| `o11y-regional-server` | O11Y storage resource group | `Owner` | Manage O11Y storage resources |
-| `o11y-regional-server` | O11Y storage resource group | `Storage Blob Data Owner` | Manage O11Y blob data |
-| `o11y-vmbackup` | O11Y storage resource group | `Storage Blob Data Contributor` | Read and write VM backup blob data |
-| `o11y-loki` | O11Y storage resource group | `Storage Blob Data Contributor` | Read and write Loki blob data |
-| `o11y-velero` | O11Y storage resource group | `Storage Blob Data Contributor` | Read and write Velero backup blob data |
+| Identity | Access granted | Purpose |
+|---|---|---|
+| O11Y AKS kubelet identity | ACR: `AcrPull` | Allow O11Y AKS workloads to pull container images |
+| O11Y AKS control-plane identity | Required network scope: `Network Contributor`; O11Y AKS kubelet identity: `Managed Identity Operator` | Allow O11Y AKS to manage required network resources and use the pre-created kubelet identity |
+| `o11y-agic` | O11Y AKS/network resource group: custom `TiDB BYOC O11Y AGIC Operator - <deployName>` | Manage the O11Y Application Gateway and read related network resources for ingress reconciliation |
+| `o11y-regional-server` | O11Y AKS/network resource group: `Owner`, `Network Contributor`; O11Y storage resource group: `Owner`, `Storage Blob Data Owner` | Manage O11Y AKS, network, storage, and blob data resources |
+| `o11y-vmbackup` | O11Y storage resource group: `Storage Blob Data Contributor` | Read and write VM backup blob data |
+| `o11y-loki` | O11Y storage resource group: `Storage Blob Data Contributor` | Read and write Loki blob data |
+| `o11y-velero` | O11Y storage resource group: `Storage Blob Data Contributor` | Read and write Velero backup blob data |
 
 ### Script inputs
 
