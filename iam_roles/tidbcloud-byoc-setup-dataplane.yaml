@@ -404,6 +404,42 @@ Resources:
                   - s3:PutObject
                 Resource:
                   - arn:aws:s3:::tidbcloud-*-byoc-audit/*
+  # Create import role for TiDB import and global sort jobs
+  TiDBCloudImportRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tidbcloud-import-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt TiDBCloudEKSNodeRole.Arn
+            Action: sts:AssumeRole
+            Condition:
+              StringLike:
+                sts:ExternalId: "?*"
+      Policies:
+        - PolicyName: import-s3-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ListImportBuckets
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - arn:aws:s3:::tidbcloud*
+              - Sid: ReadWriteImportObjects
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Resource:
+                  - arn:aws:s3:::tidbcloud*/*
   # Create dataplane-manager role
   TiDBCloudDataplaneManagerRole:
     Type: AWS::IAM::Role
