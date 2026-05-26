@@ -190,8 +190,8 @@ This custom role should contain only the Azure permissions required for dataplan
 | AKS cluster credentials | Managed-cluster credential retrieval actions, such as `managedClusters/listCluster*Credential/action` |
 | Networking | `Microsoft.Network/virtualNetworks/*`, `Microsoft.Network/natGateways/*`, `Microsoft.Network/publicIPAddresses/*`, `Microsoft.Network/privateLinkServices/*`, `Microsoft.Network/privateEndpoints/*`, `Microsoft.Network/privateDnsZones/*`, `Microsoft.Network/loadBalancers/read` |
 | Managed identity assignment | `Microsoft.ManagedIdentity/userAssignedIdentities/assign/action` |
-| Storage account management | `Microsoft.Storage/storageAccounts/read`, `Microsoft.Storage/storageAccounts/write`, `Microsoft.Storage/storageAccounts/delete` |
-| Storage container management | `Microsoft.Storage/storageAccounts/blobServices/read`, `Microsoft.Storage/storageAccounts/blobServices/containers/read`, `Microsoft.Storage/storageAccounts/blobServices/containers/write`, `Microsoft.Storage/storageAccounts/blobServices/containers/delete` |
+| Storage account management | `Microsoft.Storage/storageAccounts/read`, `Microsoft.Storage/storageAccounts/write`, `Microsoft.Storage/storageAccounts/delete`, `Microsoft.Storage/storageAccounts/listKeys/action` |
+| Storage service and container management | `Microsoft.Storage/storageAccounts/blobServices/read`, `Microsoft.Storage/storageAccounts/fileServices/read`, `Microsoft.Storage/storageAccounts/blobServices/containers/read`, `Microsoft.Storage/storageAccounts/blobServices/containers/write`, `Microsoft.Storage/storageAccounts/blobServices/containers/delete` |
 | Storage lifecycle management | `Microsoft.Storage/storageAccounts/managementPolicies/read`, `Microsoft.Storage/storageAccounts/managementPolicies/write`, `Microsoft.Storage/storageAccounts/managementPolicies/delete` |
 | Blob data listing | Data action `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read`, with a subscription role-assignment condition that permits only the `Blob.List` suboperation and denies blob content reads |
 
