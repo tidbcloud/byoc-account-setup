@@ -189,6 +189,7 @@ This custom role should contain only the Azure permissions required for dataplan
 | AKS clusters and node pools | `Microsoft.ContainerService/managedClusters/*`, `Microsoft.ContainerService/managedClusters/agentPools/*` |
 | AKS cluster credentials | Managed-cluster credential retrieval actions, such as `managedClusters/listCluster*Credential/action` |
 | Networking | `Microsoft.Network/virtualNetworks/*`, `Microsoft.Network/natGateways/*`, `Microsoft.Network/publicIPAddresses/*`, `Microsoft.Network/privateLinkServices/*`, `Microsoft.Network/privateEndpoints/*`, `Microsoft.Network/privateDnsZones/*`, `Microsoft.Network/loadBalancers/read` |
+| Managed identity assignment | `Microsoft.ManagedIdentity/userAssignedIdentities/assign/action` |
 | Storage account management | `Microsoft.Storage/storageAccounts/read`, `Microsoft.Storage/storageAccounts/write`, `Microsoft.Storage/storageAccounts/delete` |
 | Storage container management | `Microsoft.Storage/storageAccounts/blobServices/read`, `Microsoft.Storage/storageAccounts/blobServices/containers/read`, `Microsoft.Storage/storageAccounts/blobServices/containers/write`, `Microsoft.Storage/storageAccounts/blobServices/containers/delete` |
 | Storage lifecycle management | `Microsoft.Storage/storageAccounts/managementPolicies/read`, `Microsoft.Storage/storageAccounts/managementPolicies/write`, `Microsoft.Storage/storageAccounts/managementPolicies/delete` |

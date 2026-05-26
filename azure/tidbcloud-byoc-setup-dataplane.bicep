@@ -69,6 +69,7 @@ resource dataplaneRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
           'Microsoft.Network/privateEndpoints/*'
           'Microsoft.Network/privateDnsZones/*'
           'Microsoft.Network/loadBalancers/read'
+          'Microsoft.ManagedIdentity/userAssignedIdentities/assign/action'
           'Microsoft.Storage/storageAccounts/read'
           'Microsoft.Storage/storageAccounts/write'
           'Microsoft.Storage/storageAccounts/delete'
