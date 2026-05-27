@@ -374,6 +374,8 @@ DNS_RESOURCE_GROUP_SCOPE="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGro
 DNS_SCOPE="${DNS_RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/dnsZones/${DNS_ZONE_ROOT_DOMAIN}"
 INITIAL_DEPLOY_ROLE="Contributor"
 STORAGE_BLOB_DATA_CONTRIBUTOR_ROLE="Storage Blob Data Contributor"
+STORAGE_ACCOUNT_KEY_OPERATOR_ROLE="Storage Account Key Operator Service Role"
+READER_ROLE="Reader"
 DATAPLANE_ROLE="TiDB BYOC Dataplane Operator - ${DEPLOY_NAME}"
 DATAPLANE_DNS_ROLE="TiDB BYOC Dataplane DNS Record Operator - ${DEPLOY_NAME}"
 DATAPLANE_BLOB_LIST_ONLY_CONDITION="!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'} AND NOT SubOperationMatches{'Blob.List'})"
@@ -394,7 +396,13 @@ az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "/subscript
 az role assignment list --assignee "$O11Y_VELERO_PRINCIPAL_ID" --scope "$O11Y_STORAGE_SCOPE" -o table
 az role assignment list --assignee "$O11Y_VELERO_PRINCIPAL_ID" --scope "$O11Y_STORAGE_SCOPE" -o json \
   | jq --arg role "$STORAGE_BLOB_DATA_CONTRIBUTOR_ROLE" --arg scope "$O11Y_STORAGE_SCOPE" '[.[] | select(.roleDefinitionName == $role and (.scope | ascii_downcase) == ($scope | ascii_downcase))][0]' \
-  | tee /tmp/tidbcloud-byoc-o11y-velero-storage-role-assignment.json | jq .
+  | tee /tmp/tidbcloud-byoc-o11y-velero-storage-blob-contributor-role-assignment.json | jq .
+az role assignment list --assignee "$O11Y_VELERO_PRINCIPAL_ID" --scope "$O11Y_STORAGE_SCOPE" -o json \
+  | jq --arg role "$STORAGE_ACCOUNT_KEY_OPERATOR_ROLE" --arg scope "$O11Y_STORAGE_SCOPE" '[.[] | select(.roleDefinitionName == $role and (.scope | ascii_downcase) == ($scope | ascii_downcase))][0]' \
+  | tee /tmp/tidbcloud-byoc-o11y-velero-storage-key-operator-role-assignment.json | jq .
+az role assignment list --assignee "$O11Y_VELERO_PRINCIPAL_ID" --scope "$O11Y_STORAGE_SCOPE" -o json \
+  | jq --arg role "$READER_ROLE" --arg scope "$O11Y_STORAGE_SCOPE" '[.[] | select(.roleDefinitionName == $role and (.scope | ascii_downcase) == ($scope | ascii_downcase))][0]' \
+  | tee /tmp/tidbcloud-byoc-o11y-velero-storage-reader-role-assignment.json | jq .
 
 az account set --subscription "$DNS_ZONE_SUBSCRIPTION_ID"
 az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "$DNS_SCOPE" -o table
@@ -444,7 +452,17 @@ jq -e --arg role "$INITIAL_DEPLOY_ROLE" --arg scope "$ACR_RESOURCE_ID" '
 jq -e --arg role "$STORAGE_BLOB_DATA_CONTRIBUTOR_ROLE" --arg scope "$O11Y_STORAGE_SCOPE" '
   .roleDefinitionName == $role
   and (.scope | ascii_downcase) == ($scope | ascii_downcase)
-' /tmp/tidbcloud-byoc-o11y-velero-storage-role-assignment.json >/dev/null
+' /tmp/tidbcloud-byoc-o11y-velero-storage-blob-contributor-role-assignment.json >/dev/null
+
+jq -e --arg role "$STORAGE_ACCOUNT_KEY_OPERATOR_ROLE" --arg scope "$O11Y_STORAGE_SCOPE" '
+  .roleDefinitionName == $role
+  and (.scope | ascii_downcase) == ($scope | ascii_downcase)
+' /tmp/tidbcloud-byoc-o11y-velero-storage-key-operator-role-assignment.json >/dev/null
+
+jq -e --arg role "$READER_ROLE" --arg scope "$O11Y_STORAGE_SCOPE" '
+  .roleDefinitionName == $role
+  and (.scope | ascii_downcase) == ($scope | ascii_downcase)
+' /tmp/tidbcloud-byoc-o11y-velero-storage-reader-role-assignment.json >/dev/null
 
 jq -e '
   def has_action($action): (.actions // []) | index($action) != null;
@@ -515,7 +533,7 @@ Pass criteria:
 - Dataplane app has dataplane custom role at BYOC subscription scope.
 - Dataplane app has DNS record custom role at the public DNS zone scope, in the public DNS zone subscription.
 - Dataplane app is a member of the AKS admin group.
-- `o11y-velero` has `Storage Blob Data Contributor` at the O11Y storage resource group scope.
+- `o11y-velero` has `Storage Blob Data Contributor`, `Storage Account Key Operator Service Role`, and `Reader` at the O11Y storage resource group scope.
 - `o11y-agic` has the custom O11Y AGIC operator role at the O11Y AKS/network resource group scope.
 - Custom roles do not include role assignment write/delete.
 - Dataplane custom role uses explicit storage account, container, and lifecycle management actions without storage wildcards.

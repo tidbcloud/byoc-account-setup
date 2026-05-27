@@ -27,6 +27,8 @@ var managedIdentityOperatorRoleId = 'f1a07417-d97a-45cb-824c-7a7467783830'
 var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+var storageAccountKeyOperatorServiceRoleId = '81a9662b-bebf-436f-a333-f67b29880f12'
+var readerRoleId = 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
 
 var ownerRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', ownerRoleId)
 var networkContributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', networkContributorRoleId)
@@ -34,6 +36,8 @@ var managedIdentityOperatorRoleDefinitionId = subscriptionResourceId('Microsoft.
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
 var storageBlobDataOwnerRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataOwnerRoleId)
 var storageBlobDataContributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+var storageAccountKeyOperatorServiceRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageAccountKeyOperatorServiceRoleId)
+var readerRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', readerRoleId)
 
 resource o11yResourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: o11yResourceGroupName
@@ -136,6 +140,26 @@ module veleroStorageBlobDataContributorAssignment './modules/resource-group-role
   params: {
     principalId: o11yIdentities.outputs.veleroPrincipalId
     roleDefinitionId: storageBlobDataContributorRoleDefinitionId
+    assignmentGuidSeed: veleroIdentityResourceId
+  }
+}
+
+module veleroStorageAccountKeyOperatorAssignment './modules/resource-group-role-assignment.bicep' = {
+  name: 'o11y-velero-storage-key-operator'
+  scope: o11yStorageResourceGroup
+  params: {
+    principalId: o11yIdentities.outputs.veleroPrincipalId
+    roleDefinitionId: storageAccountKeyOperatorServiceRoleDefinitionId
+    assignmentGuidSeed: veleroIdentityResourceId
+  }
+}
+
+module veleroStorageReaderAssignment './modules/resource-group-role-assignment.bicep' = {
+  name: 'o11y-velero-storage-reader'
+  scope: o11yStorageResourceGroup
+  params: {
+    principalId: o11yIdentities.outputs.veleroPrincipalId
+    roleDefinitionId: readerRoleDefinitionId
     assignmentGuidSeed: veleroIdentityResourceId
   }
 }

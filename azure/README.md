@@ -253,7 +253,7 @@ The setup grants these RBAC roles:
 | `o11y-regional-server` | O11Y AKS/network resource group: `Owner`, `Network Contributor`; O11Y storage resource group: `Owner`, `Storage Blob Data Owner` | Manage O11Y AKS, network, storage, and blob data resources |
 | `o11y-vmbackup` | O11Y storage resource group: `Storage Blob Data Contributor` | Read and write VM backup blob data |
 | `o11y-loki` | O11Y storage resource group: `Storage Blob Data Contributor` | Read and write Loki blob data |
-| `o11y-velero` | O11Y storage resource group: `Storage Blob Data Contributor` | Read and write Velero backup blob data |
+| `o11y-velero` | O11Y storage resource group: `Storage Blob Data Contributor`, `Storage Account Key Operator Service Role`, `Reader` | Read and write Velero backup blob data, read storage resource metadata, and access storage account keys |
 
 ### Script inputs
 
