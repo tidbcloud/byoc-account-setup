@@ -370,6 +370,7 @@ AKS_ADMIN_GROUP_OBJECT_ID=$(jq -r '.aksAdminGroupObjectId' "$STATE")
 O11Y_RESOURCE_GROUP=$(jq -r '.o11yResourceGroupName' "$STATE")
 O11Y_STORAGE_SCOPE="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${O11Y_RESOURCE_GROUP}-storage"
 O11Y_VELERO_PRINCIPAL_ID=$(az identity show --resource-group "$O11Y_RESOURCE_GROUP" --name o11y-velero --query principalId -o tsv)
+O11Y_AGIC_PRINCIPAL_ID=$(az identity show --resource-group "$O11Y_RESOURCE_GROUP" --name o11y-agic --query principalId -o tsv)
 DNS_RESOURCE_GROUP_SCOPE="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${DNS_ZONE_RESOURCE_GROUP}"
 DNS_SCOPE="${DNS_RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/dnsZones/${DNS_ZONE_ROOT_DOMAIN}"
 INITIAL_DEPLOY_ROLE="Contributor"
@@ -378,6 +379,7 @@ STORAGE_ACCOUNT_KEY_OPERATOR_ROLE="Storage Account Key Operator Service Role"
 READER_ROLE="Reader"
 DATAPLANE_ROLE="TiDB BYOC Dataplane Operator - ${DEPLOY_NAME}"
 DATAPLANE_DNS_ROLE="TiDB BYOC Dataplane DNS Record Operator - ${DEPLOY_NAME}"
+O11Y_AGIC_ROLE="TiDB BYOC O11Y AGIC Operator - ${DEPLOY_NAME}"
 DATAPLANE_BLOB_LIST_ONLY_CONDITION="!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'} AND NOT SubOperationMatches{'Blob.List'})"
 
 az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" -o table
@@ -392,6 +394,10 @@ az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "/subscript
 az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" -o json \
   | jq --arg role "$DATAPLANE_ROLE" '[.[] | select(.roleDefinitionName == $role)][0]' \
   | tee /tmp/tidbcloud-byoc-dataplane-role-assignment.json | jq .
+az role assignment list --assignee "$O11Y_AGIC_PRINCIPAL_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" -o table
+az role assignment list --assignee "$O11Y_AGIC_PRINCIPAL_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" -o json \
+  | jq --arg role "$O11Y_AGIC_ROLE" --arg scope "/subscriptions/${SUBSCRIPTION_ID}" '[.[] | select(.roleDefinitionName == $role and (.scope | ascii_downcase) == ($scope | ascii_downcase))][0]' \
+  | tee /tmp/tidbcloud-byoc-o11y-agic-role-assignment.json | jq .
 
 az role assignment list --assignee "$O11Y_VELERO_PRINCIPAL_ID" --scope "$O11Y_STORAGE_SCOPE" -o table
 az role assignment list --assignee "$O11Y_VELERO_PRINCIPAL_ID" --scope "$O11Y_STORAGE_SCOPE" -o json \
@@ -424,7 +430,11 @@ az role definition list \
   --name "$DATAPLANE_ROLE" \
   --query "[0].permissions[0]" -o json | tee /tmp/tidbcloud-byoc-dataplane-role-perms.json | jq .
 
-for file in /tmp/tidbcloud-byoc-dataplane-role-perms.json /tmp/tidbcloud-byoc-dataplane-dns-role-perms.json; do
+az role definition list --name "$O11Y_AGIC_ROLE" --scope "/subscriptions/${SUBSCRIPTION_ID}" -o json \
+  | jq '.[0]' | tee /tmp/tidbcloud-byoc-o11y-agic-role.json \
+  | jq '.permissions[0]' | tee /tmp/tidbcloud-byoc-o11y-agic-role-perms.json | jq .
+
+for file in /tmp/tidbcloud-byoc-dataplane-role-perms.json /tmp/tidbcloud-byoc-dataplane-dns-role-perms.json /tmp/tidbcloud-byoc-o11y-agic-role-perms.json; do
   jq -e '
     def has_not_action($action): (.notActions // []) | index($action) != null;
     ((.actions // []) | index("Microsoft.Authorization/roleAssignments/write") == null)
@@ -463,6 +473,11 @@ jq -e --arg role "$READER_ROLE" --arg scope "$O11Y_STORAGE_SCOPE" '
   .roleDefinitionName == $role
   and (.scope | ascii_downcase) == ($scope | ascii_downcase)
 ' /tmp/tidbcloud-byoc-o11y-velero-storage-reader-role-assignment.json >/dev/null
+
+jq -e --arg role "$O11Y_AGIC_ROLE" --arg scope "/subscriptions/${SUBSCRIPTION_ID}" '
+  .roleDefinitionName == $role
+  and (.scope | ascii_downcase) == ($scope | ascii_downcase)
+' /tmp/tidbcloud-byoc-o11y-agic-role-assignment.json >/dev/null
 
 jq -e '
   def has_action($action): (.actions // []) | index($action) != null;
@@ -524,6 +539,31 @@ jq -e --arg role "$DATAPLANE_DNS_ROLE" --arg scope "$DNS_SCOPE" '
   .roleDefinitionName == $role
   and (.scope | ascii_downcase) == ($scope | ascii_downcase)
 ' /tmp/tidbcloud-byoc-dataplane-dns-role-assignment.json >/dev/null
+
+jq -e '
+  ((.actions // []) | sort) == ([
+    "Microsoft.Resources/subscriptions/resourceGroups/read",
+    "Microsoft.Network/applicationGateways/*",
+    "Microsoft.Network/applicationGatewayWebApplicationFirewallPolicies/read",
+    "Microsoft.Network/virtualNetworks/read",
+    "Microsoft.Network/virtualNetworks/subnets/read",
+    "Microsoft.Network/virtualNetworks/subnets/join/action",
+    "Microsoft.Network/publicIPAddresses/read",
+    "Microsoft.Network/networkInterfaces/read",
+    "Microsoft.Network/loadBalancers/read",
+    "Microsoft.Network/routeTables/read"
+  ] | sort)
+  and ((.notActions // []) | sort) == ([
+    "Microsoft.Authorization/roleAssignments/write",
+    "Microsoft.Authorization/roleAssignments/delete"
+  ] | sort)
+  and ((.dataActions // []) | length == 0)
+  and ((.notDataActions // []) | length == 0)
+' /tmp/tidbcloud-byoc-o11y-agic-role-perms.json >/dev/null
+
+jq -e --arg scope "/subscriptions/${SUBSCRIPTION_ID}" '
+  ((.assignableScopes // []) | map(ascii_downcase)) == [($scope | ascii_downcase)]
+' /tmp/tidbcloud-byoc-o11y-agic-role.json >/dev/null
 ```
 
 Pass criteria:
@@ -534,13 +574,13 @@ Pass criteria:
 - Dataplane app has DNS record custom role at the public DNS zone scope, in the public DNS zone subscription.
 - Dataplane app is a member of the AKS admin group.
 - `o11y-velero` has `Storage Blob Data Contributor`, `Storage Account Key Operator Service Role`, and `Reader` at the O11Y storage resource group scope.
-- `o11y-agic` has the custom O11Y AGIC operator role at the O11Y AKS/network resource group scope.
+- `o11y-agic` has the custom O11Y AGIC operator role at the BYOC subscription scope.
 - Custom roles do not include role assignment write/delete.
 - Dataplane custom role uses explicit storage account, container, and lifecycle management actions without storage wildcards.
 - Dataplane custom role has blob read DataAction only with a subscription role-assignment condition that allows `Blob.List` and denies blob content reads.
 - Dataplane custom role does not include public DNS zone actions or copied `DNS Zone Contributor` support actions.
 - Dataplane DNS record custom role includes only DNS zone read and DNS A record read/write/delete actions.
-- O11Y AGIC custom role includes Application Gateway management actions plus read-only supporting network actions, and does not grant broad `Contributor`.
+- O11Y AGIC custom role includes Application Gateway management actions, subnet join, and supporting read-only network actions, and does not grant broad `Contributor`.
 
 ## 5. Idempotency
 

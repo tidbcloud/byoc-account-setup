@@ -1,11 +1,12 @@
-targetScope = 'resourceGroup'
+targetScope = 'subscription'
 
 param roleName string
 param principalId string
 param assignmentGuidSeed string
+param roleGuidSeed string
 
 resource agicRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
-  name: guid(resourceGroup().id, roleName)
+  name: guid(roleGuidSeed, roleName)
   properties: {
     roleName: roleName
     description: 'Least-privilege role for TiDB Cloud BYOC O11Y Application Gateway Ingress Controller.'
@@ -18,9 +19,11 @@ resource agicRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
           'Microsoft.Network/applicationGatewayWebApplicationFirewallPolicies/read'
           'Microsoft.Network/virtualNetworks/read'
           'Microsoft.Network/virtualNetworks/subnets/read'
+          'Microsoft.Network/virtualNetworks/subnets/join/action'
           'Microsoft.Network/publicIPAddresses/read'
           'Microsoft.Network/networkInterfaces/read'
           'Microsoft.Network/loadBalancers/read'
+          'Microsoft.Network/routeTables/read'
         ]
         notActions: [
           'Microsoft.Authorization/roleAssignments/write'
@@ -31,13 +34,13 @@ resource agicRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
       }
     ]
     assignableScopes: [
-      resourceGroup().id
+      subscription().id
     ]
   }
 }
 
 resource agicRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(resourceGroup().id, assignmentGuidSeed, agicRole.id)
+  name: guid(subscription().id, assignmentGuidSeed, agicRole.id)
   properties: {
     principalId: principalId
     principalType: 'ServicePrincipal'

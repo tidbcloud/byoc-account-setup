@@ -66,11 +66,11 @@ module o11yIdentities './modules/o11y-identity-resources.bicep' = {
 
 module o11yAgicRoleAssignment './modules/o11y-agic-role-assignment.bicep' = {
   name: 'o11y-agic-role-assignment'
-  scope: o11yInfraResourceGroup
   params: {
     roleName: o11yAgicRoleName
     principalId: o11yIdentities.outputs.o11yAgicPrincipalId
     assignmentGuidSeed: agicIdentityResourceId
+    roleGuidSeed: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${o11yInfraResourceGroupName}'
   }
 }
 
