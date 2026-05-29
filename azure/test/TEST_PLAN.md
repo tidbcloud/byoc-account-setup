@@ -495,6 +495,7 @@ jq -e '
   and has_action("Microsoft.Storage/storageAccounts/managementPolicies/read")
   and has_action("Microsoft.Storage/storageAccounts/managementPolicies/write")
   and has_action("Microsoft.Storage/storageAccounts/managementPolicies/delete")
+  and has_action("Microsoft.Network/networkInterfaces/read")
   and has_action("Microsoft.ManagedIdentity/userAssignedIdentities/assign/action")
   and lacks_action("Microsoft.Storage/storageAccounts/*")
   and lacks_action("Microsoft.Storage/storageAccounts/blobServices/containers/*")
