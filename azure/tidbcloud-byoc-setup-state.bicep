@@ -11,6 +11,8 @@ param subscriptionId string
 param dnsZoneSubscriptionId string
 param dnsZoneResourceGroupName string
 param dnsZoneName string
+param o11yDnsZoneResourceGroupName string
+param o11yDnsZoneName string
 param deploymentAppId string
 param dataplaneAppId string
 param deploymentResourceGroupName string
@@ -52,6 +54,8 @@ output setupState object = {
   dnsZoneSubscriptionId: dnsZoneSubscriptionId
   dnsZoneResourceGroupName: dnsZoneResourceGroupName
   dnsZoneName: dnsZoneName
+  o11yDnsZoneResourceGroupName: o11yDnsZoneResourceGroupName
+  o11yDnsZoneName: o11yDnsZoneName
   deploymentAppId: deploymentAppId
   dataplaneAppId: dataplaneAppId
   deploymentResourceGroupName: deploymentResourceGroupName
@@ -97,6 +101,8 @@ output customerOnboarding object = {
   customer_acr_login_server: acrLoginServer
   tidb_cluster_dns_domain: dnsZoneName
   tidb_cluster_dns_resource_group: dnsZoneResourceGroupName
+  o11y_dns_domain: o11yDnsZoneName
+  o11y_dns_resource_group: o11yDnsZoneResourceGroupName
   audit_log_storage_account_name: auditLogStorageAccountName
   audit_log_bucket: auditLogContainerName
   storage_accounts_resource_group: storageResourceGroupName

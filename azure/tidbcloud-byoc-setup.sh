@@ -15,6 +15,8 @@ Required:
   --dns-zone-subscription-id <subscription-id>
   --dns-zone-resource-group <resource-group>
   --dns-zone-root-domain <dns-zone-name>
+  --o11y-dns-zone-resource-group <resource-group>
+  --o11y-dns-zone-root-domain <dns-zone-name>
   --deployment-app-id <client-id>
   --dataplane-app-id <client-id>
 
@@ -29,7 +31,7 @@ USAGE
 
 require_arg() { [[ $# -ge 2 && "${2-}" != -* ]] || { echo "Error: $1 requires a value"; usage; }; }
 
-DEPLOY_NAME=""; LOCATION=""; TENANT_ID=""; SUBSCRIPTION_ID=""; DNS_ZONE_SUBSCRIPTION_ID=""; DNS_ZONE_RESOURCE_GROUP=""; DNS_ZONE_ROOT_DOMAIN=""; DEPLOYMENT_APP_ID=""; DATAPLANE_APP_ID=""
+DEPLOY_NAME=""; LOCATION=""; TENANT_ID=""; SUBSCRIPTION_ID=""; DNS_ZONE_SUBSCRIPTION_ID=""; DNS_ZONE_RESOURCE_GROUP=""; DNS_ZONE_ROOT_DOMAIN=""; O11Y_DNS_ZONE_RESOURCE_GROUP=""; O11Y_DNS_ZONE_ROOT_DOMAIN=""; DEPLOYMENT_APP_ID=""; DATAPLANE_APP_ID=""
 ACR_RESOURCE_GROUP=""; ACR_NAME=""; AUDIT_LOG_CONTAINER_NAME="audit-log"; REUSE_ACR=false
 
 while [[ $# -gt 0 ]]; do
@@ -41,6 +43,8 @@ while [[ $# -gt 0 ]]; do
     --dns-zone-subscription-id) require_arg "$@"; DNS_ZONE_SUBSCRIPTION_ID="$2"; shift 2 ;;
     --dns-zone-resource-group) require_arg "$@"; DNS_ZONE_RESOURCE_GROUP="$2"; shift 2 ;;
     --dns-zone-root-domain) require_arg "$@"; DNS_ZONE_ROOT_DOMAIN="$2"; shift 2 ;;
+    --o11y-dns-zone-resource-group) require_arg "$@"; O11Y_DNS_ZONE_RESOURCE_GROUP="$2"; shift 2 ;;
+    --o11y-dns-zone-root-domain) require_arg "$@"; O11Y_DNS_ZONE_ROOT_DOMAIN="$2"; shift 2 ;;
     --deployment-app-id) require_arg "$@"; DEPLOYMENT_APP_ID="$2"; shift 2 ;;
     --dataplane-app-id) require_arg "$@"; DATAPLANE_APP_ID="$2"; shift 2 ;;
     --acr-resource-group) require_arg "$@"; ACR_RESOURCE_GROUP="$2"; shift 2 ;;
@@ -52,7 +56,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 missing=()
-for pair in DEPLOY_NAME:--deploy-name LOCATION:--location TENANT_ID:--tenant-id SUBSCRIPTION_ID:--subscription-id DNS_ZONE_SUBSCRIPTION_ID:--dns-zone-subscription-id DNS_ZONE_RESOURCE_GROUP:--dns-zone-resource-group DNS_ZONE_ROOT_DOMAIN:--dns-zone-root-domain DEPLOYMENT_APP_ID:--deployment-app-id DATAPLANE_APP_ID:--dataplane-app-id; do
+for pair in DEPLOY_NAME:--deploy-name LOCATION:--location TENANT_ID:--tenant-id SUBSCRIPTION_ID:--subscription-id DNS_ZONE_SUBSCRIPTION_ID:--dns-zone-subscription-id DNS_ZONE_RESOURCE_GROUP:--dns-zone-resource-group DNS_ZONE_ROOT_DOMAIN:--dns-zone-root-domain O11Y_DNS_ZONE_RESOURCE_GROUP:--o11y-dns-zone-resource-group O11Y_DNS_ZONE_ROOT_DOMAIN:--o11y-dns-zone-root-domain DEPLOYMENT_APP_ID:--deployment-app-id DATAPLANE_APP_ID:--dataplane-app-id; do
   var=${pair%%:*}; flag=${pair#*:}; [[ -n "${!var}" ]] || missing+=("$flag")
 done
 [[ ${#missing[@]} -eq 0 ]] || { echo "Error: missing required parameters: ${missing[*]}"; usage; }
@@ -173,7 +177,8 @@ deploy_stack "$DEPLOY_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-deploy.bic
 
 echo "Creating or updating deployment stack: initial deploy access"
 deploy_stack_delete_unmanaged "$INITIAL_DEPLOY_ACCESS_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-initial-deploy-access.bicep" \
-  deploymentPrincipalObjectId="$DEPLOYMENT_SP_OBJECT_ID"
+  deploymentPrincipalObjectId="$DEPLOYMENT_SP_OBJECT_ID" \
+  o11yDnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" o11yDnsZoneResourceGroupName="$O11Y_DNS_ZONE_RESOURCE_GROUP" o11yDnsZoneName="$O11Y_DNS_ZONE_ROOT_DOMAIN"
 
 ACR_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${ACR_RESOURCE_GROUP}/providers/Microsoft.ContainerRegistry/registries/${ACR_NAME}"
 
@@ -196,6 +201,7 @@ echo "Creating or updating deployment stack: state"
 deploy_stack_delete_unmanaged "$STATE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-state.bicep" \
   deployName="$DEPLOY_NAME" location="$LOCATION" tenantId="$TENANT_ID" subscriptionId="$SUBSCRIPTION_ID" \
   dnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" dnsZoneResourceGroupName="$DNS_ZONE_RESOURCE_GROUP" dnsZoneName="$DNS_ZONE_ROOT_DOMAIN" \
+  o11yDnsZoneResourceGroupName="$O11Y_DNS_ZONE_RESOURCE_GROUP" o11yDnsZoneName="$O11Y_DNS_ZONE_ROOT_DOMAIN" \
   deploymentAppId="$DEPLOYMENT_APP_ID" dataplaneAppId="$DATAPLANE_APP_ID" \
   deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrCreatedBySetup="$CREATE_ACR" storageResourceGroupName="$STORAGE_RESOURCE_GROUP" identitiesResourceGroupName="$IDENTITIES_RESOURCE_GROUP" \
   o11yResourceGroupName="$O11Y_RESOURCE_GROUP" \

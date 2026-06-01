@@ -7,13 +7,13 @@ After you complete this guide, TiDB Cloud can:
 - deploy BYOC infrastructure into the Azure subscription you provide;
 - manage TiDB dataplane resources in that subscription;
 - manage observability components required by TiDB Cloud;
-- create DNS records for TiDB cluster endpoints in the DNS zone you provide.
+- create DNS records for TiDB cluster and O11Y endpoints in the DNS zones you provide.
 
 ## Setup overview
 
 The setup has two main steps:
 
-1. Prepare one Azure subscription and one public DNS zone.
+1. Prepare one Azure subscription and public DNS zones.
 2. Run the PingCAP-provided setup scripts.
 
 The scripts create the resources TiDB Cloud needs, including deployment stacks, resource groups, managed identities, an ACR for image synchronization, and Blob Storage for audit logs.
@@ -43,7 +43,7 @@ Ongoing management uses static Azure RBAC permissions and does not grant TiDB Cl
 ## What you need to do
 
 1. Prepare one Azure subscription for TiDB Cloud BYOC workloads.
-2. Prepare one public DNS zone for TiDB cluster DNS records.
+2. Prepare public DNS zones for TiDB cluster and O11Y endpoints.
 3. Obtain your TiDB Cloud BYOC deploy name and two TiDB Cloud multi-tenant application IDs from PingCAP.
 4. Run the setup scripts provided by PingCAP.
 5. Share the onboarding state stack coordinates with PingCAP.
@@ -70,7 +70,7 @@ The Azure operator who runs the setup needs these roles:
 |---|---|---|
 | BYOC subscription | `Contributor` | Create Azure resources required during setup |
 | BYOC subscription | `User Access Administrator` | Create Azure custom roles and role assignments required during setup |
-| Public DNS zone subscription | `User Access Administrator` | Required only when the DNS zone is outside the BYOC subscription; allows setup to create the DNS record custom role and grant access on the DNS zone |
+| Public DNS zone subscription | `User Access Administrator` | Required only when the DNS zones are outside the BYOC subscription; allows setup to create the TiDB DNS record custom role and grant access on the TiDB and O11Y DNS zones |
 | Microsoft Entra tenant | `Cloud Application Administrator` | Create enterprise applications from the PingCAP multi-tenant applications |
 | Microsoft Entra tenant | `Groups Administrator` | Create the Microsoft Entra ID group and manage its members |
 
@@ -93,11 +93,11 @@ Provide these values to the setup script:
 | `tenantId` | Your Microsoft Entra tenant ID |
 | `subscriptionId` | The Azure subscription ID used for TiDB Cloud BYOC |
 
-### 2. Public DNS zone
+### 2. Public DNS zones
 
-Create or choose a public Azure DNS zone for TiDB cluster endpoints. The DNS zone may be in the same subscription or another subscription under the same tenant.
+Create or choose public Azure DNS zones for TiDB cluster endpoints and O11Y endpoints. These DNS zones may be in the same subscription or another subscription under the same tenant. The setup uses the same DNS zone subscription ID for both zones.
 
-TiDB Cloud will create and delete DNS records in this zone when TiDB clusters are created or deleted. Your applications use these records to connect to TiDB clusters.
+TiDB Cloud will create and delete DNS records in the TiDB zone when TiDB clusters are created or deleted. The deployment application receives temporary access to manage records in the O11Y DNS zone during initial deployment.
 
 Provide these values to the setup script:
 
@@ -106,6 +106,8 @@ Provide these values to the setup script:
 | `subscriptionIdOfDNSZone` | Subscription ID that contains the DNS zone |
 | `resourceGroupOfDNSZone` | Resource group that contains the DNS zone |
 | `rootDomainOfDNSZone` | Root domain of the DNS zone, for example `tidb.example.com` |
+| `resourceGroupOfO11YDNSZone` | Resource group that contains the O11Y DNS zone |
+| `rootDomainOfO11YDNSZone` | Root domain of the O11Y DNS zone, for example `o11y.example.com` |
 
 A TiDB cluster endpoint will look similar to `xxxx.tidb.example.com`.
 
@@ -115,7 +117,7 @@ The setup scripts create the Azure resources and access bindings required for Ti
 
 ### Resources created by the scripts
 
-The public DNS zone itself is customer-provided. Custom roles and role assignments are covered in [Privileges granted during setup](#privileges-granted-during-setup). The scripts create or reconcile these resources:
+The public DNS zones themselves are customer-provided. Custom roles and role assignments are covered in [Privileges granted during setup](#privileges-granted-during-setup). The scripts create or reconcile these resources:
 
 | Category | Resource created or reconciled | Why it is needed |
 |---|---|---|
@@ -159,6 +161,7 @@ Each TiDB Cloud application receives only the access required for its responsibi
 | TiDB Cloud application | Azure role | Assigned scopes | Purpose |
 |---|---|---|---|
 | Deployment application | Built-in `Contributor` | BYOC subscription | Temporary access to create initial BYOC infrastructure and read onboarding state. This access can be revoked after the first deployment completes |
+| Deployment application | Built-in `DNS Zone Contributor` | O11Y public DNS zone | Temporary access to manage O11Y DNS records during initial deployment. This access can be revoked after the first deployment completes |
 | Deployment application | Built-in `Contributor` | Customer ACR only | Query and push container images during daily management and upgrade workflows |
 | Dataplane management application | Custom `TiDB BYOC Dataplane Operator - <deployName>` | BYOC subscription | Manage TiDB dataplane resources after deployment |
 | Dataplane management application | Custom `TiDB BYOC Dataplane DNS Record Operator - <deployName>` | Public DNS zone | Create, update, read, and delete TiDB A records in the public DNS zone |
@@ -170,6 +173,8 @@ The deployment application receives built-in `Contributor` at the BYOC subscript
 This temporary grant is intentionally broad because the initial BYOC deployment creates resource groups and infrastructure across the subscription. Azure `Contributor` does not include Azure RBAC role-assignment permissions, so the setup still requires the Azure operator to have `User Access Administrator` for role assignments created during onboarding.
 
 The setup keeps this subscription-scoped `Contributor` assignment in a separate deployment stack so it can be deleted after the first BYOC deployment without deleting customer resources. After it is revoked, the deployment application no longer has BYOC subscription access to read the onboarding state stack.
+
+The same temporary deployment stack grants built-in `DNS Zone Contributor` on the O11Y public DNS zone. This lets the deployment application manage O11Y DNS records during initial deployment without granting access-control permissions on the zone. This role assignment is removed when temporary initial deployment access is revoked.
 
 ##### Deployment application ACR access
 
@@ -267,6 +272,8 @@ Prepare the following values before running the scripts:
 | `subscriptionIdOfDNSZone` | Subscription ID that contains the public DNS zone |
 | `resourceGroupOfDNSZone` | Resource group that contains the public DNS zone |
 | `rootDomainOfDNSZone` | Root domain of the public DNS zone |
+| `resourceGroupOfO11YDNSZone` | Resource group that contains the O11Y public DNS zone |
+| `rootDomainOfO11YDNSZone` | Root domain of the O11Y public DNS zone |
 | Deployment application ID | Multi-tenant application ID provided by PingCAP |
 | Dataplane management application ID | Multi-tenant application ID provided by PingCAP |
 
@@ -285,6 +292,8 @@ bash tidbcloud-byoc-setup.sh \
   --dns-zone-subscription-id <subscriptionIdOfDNSZone> \
   --dns-zone-resource-group <resourceGroupOfDNSZone> \
   --dns-zone-root-domain <rootDomainOfDNSZone> \
+  --o11y-dns-zone-resource-group <resourceGroupOfO11YDNSZone> \
+  --o11y-dns-zone-root-domain <rootDomainOfO11YDNSZone> \
   --deployment-app-id <deploymentApplicationId> \
   --dataplane-app-id <dataplaneManagementApplicationId>
 ```
@@ -300,6 +309,8 @@ bash tidbcloud-byoc-setup.sh \
   --dns-zone-subscription-id <subscriptionIdOfDNSZone> \
   --dns-zone-resource-group <resourceGroupOfDNSZone> \
   --dns-zone-root-domain <rootDomainOfDNSZone> \
+  --o11y-dns-zone-resource-group <resourceGroupOfO11YDNSZone> \
+  --o11y-dns-zone-root-domain <rootDomainOfO11YDNSZone> \
   --deployment-app-id <deploymentApplicationId> \
   --dataplane-app-id <dataplaneManagementApplicationId> \
   --acr-resource-group <existingAcrResourceGroup> \
@@ -337,7 +348,7 @@ bash tidbcloud-byoc-revoke-initial-deploy-access.sh \
   --yes
 ```
 
-This deletes only the temporary initial deployment access stack. It does not delete the ACR, BYOC resource groups, dataplane resources, O11Y resources, or onboarding state. The deployment application keeps only ACR-scoped access for image query and image push during upgrades.
+This deletes only the temporary initial deployment access stack, including temporary BYOC subscription access and temporary O11Y DNS access. It does not delete the ACR, BYOC resource groups, dataplane resources, O11Y resources, or onboarding state. The deployment application keeps only ACR-scoped access for image query and image push during upgrades.
 
 ### How do I update setup-managed resources after a template change?
 
@@ -396,7 +407,7 @@ It does not delete:
 
 - the setup-created ACR resource group and ACR, unless you add `--delete-acr`;
 - a reused ACR resource group and ACR, even if you add `--delete-acr`;
-- the customer-prepared public DNS zone;
+- the customer-prepared public DNS zones;
 - PingCAP enterprise applications, unless you add `--delete-enterprise-apps`.
 
 To also delete the ACR during test reset, add `--delete-acr`:

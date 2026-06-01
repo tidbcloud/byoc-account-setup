@@ -21,6 +21,8 @@ export SUBSCRIPTION_ID="<byoc-subscription-id>"
 export DNS_ZONE_SUBSCRIPTION_ID="<dns-zone-subscription-id>"
 export DNS_ZONE_RESOURCE_GROUP="<dns-zone-resource-group>"
 export DNS_ZONE_ROOT_DOMAIN="<dns-zone-root-domain>"
+export O11Y_DNS_ZONE_RESOURCE_GROUP="<o11y-dns-zone-resource-group>"
+export O11Y_DNS_ZONE_ROOT_DOMAIN="<o11y-dns-zone-root-domain>"
 export DEPLOYMENT_APP_ID="<deployment-app-client-id>"
 export DATAPLANE_APP_ID="<dataplane-app-client-id>"
 
@@ -36,7 +38,7 @@ Required Azure prerequisites:
 - Azure CLI is logged in to the expected tenant.
 - Azure CLI supports Deployment Stacks.
 - `jq`, `shellcheck`, and Azure Bicep CLI are available.
-- The public DNS zone exists before setup starts.
+- The TiDB and O11Y public DNS zones exist before setup starts.
 - The test operator has the roles documented in `README.md`.
 
 ### 0.1 Prepare PingCAP Multi-Tenant Applications
@@ -119,6 +121,27 @@ expect_fail() {
 expect_fail bash tidbcloud-byoc-setup.sh
 expect_fail bash tidbcloud-byoc-setup.sh --deploy-name "$DEPLOY_NAME"
 expect_fail bash tidbcloud-byoc-setup.sh --deploy-name --location "$LOCATION"
+expect_fail bash tidbcloud-byoc-setup.sh \
+  --deploy-name "$DEPLOY_NAME" \
+  --location "$LOCATION" \
+  --tenant-id "$TENANT_ID" \
+  --subscription-id "$SUBSCRIPTION_ID" \
+  --dns-zone-subscription-id "$DNS_ZONE_SUBSCRIPTION_ID" \
+  --dns-zone-resource-group "$DNS_ZONE_RESOURCE_GROUP" \
+  --dns-zone-root-domain "$DNS_ZONE_ROOT_DOMAIN" \
+  --deployment-app-id "$DEPLOYMENT_APP_ID" \
+  --dataplane-app-id "$DATAPLANE_APP_ID"
+expect_fail bash tidbcloud-byoc-setup.sh \
+  --deploy-name "$DEPLOY_NAME" \
+  --location "$LOCATION" \
+  --tenant-id "$TENANT_ID" \
+  --subscription-id "$SUBSCRIPTION_ID" \
+  --dns-zone-subscription-id "$DNS_ZONE_SUBSCRIPTION_ID" \
+  --dns-zone-resource-group "$DNS_ZONE_RESOURCE_GROUP" \
+  --dns-zone-root-domain "$DNS_ZONE_ROOT_DOMAIN" \
+  --o11y-dns-zone-resource-group "$O11Y_DNS_ZONE_RESOURCE_GROUP" \
+  --deployment-app-id "$DEPLOYMENT_APP_ID" \
+  --dataplane-app-id "$DATAPLANE_APP_ID"
 expect_fail bash tidbcloud-byoc-setup.sh --unknown
 
 expect_fail bash tidbcloud-byoc-update.sh
@@ -176,6 +199,8 @@ bash tidbcloud-byoc-setup.sh \
   --dns-zone-subscription-id "$DNS_ZONE_SUBSCRIPTION_ID" \
   --dns-zone-resource-group "$DNS_ZONE_RESOURCE_GROUP" \
   --dns-zone-root-domain "$DNS_ZONE_ROOT_DOMAIN" \
+  --o11y-dns-zone-resource-group "$O11Y_DNS_ZONE_RESOURCE_GROUP" \
+  --o11y-dns-zone-root-domain "$O11Y_DNS_ZONE_ROOT_DOMAIN" \
   --deployment-app-id "$DEPLOYMENT_APP_ID" \
   --dataplane-app-id "$DATAPLANE_APP_ID" \
   | tee /tmp/tidbcloud-byoc-setup.out
@@ -218,6 +243,8 @@ jq -e \
   --arg dns_zone_subscription_id "$DNS_ZONE_SUBSCRIPTION_ID" \
   --arg dns_zone_resource_group "$DNS_ZONE_RESOURCE_GROUP" \
   --arg dns_zone_root_domain "$DNS_ZONE_ROOT_DOMAIN" \
+  --arg o11y_dns_zone_resource_group "$O11Y_DNS_ZONE_RESOURCE_GROUP" \
+  --arg o11y_dns_zone_root_domain "$O11Y_DNS_ZONE_ROOT_DOMAIN" \
   --arg deployment_app_id "$DEPLOYMENT_APP_ID" \
   --arg dataplane_app_id "$DATAPLANE_APP_ID" \
   '.schemaVersion == "1"
@@ -228,6 +255,8 @@ jq -e \
     and .dnsZoneSubscriptionId == $dns_zone_subscription_id
     and .dnsZoneResourceGroupName == $dns_zone_resource_group
     and .dnsZoneName == $dns_zone_root_domain
+    and .o11yDnsZoneResourceGroupName == $o11y_dns_zone_resource_group
+    and .o11yDnsZoneName == $o11y_dns_zone_root_domain
     and .deploymentAppId == $deployment_app_id
     and .dataplaneAppId == $dataplane_app_id
     and (.acrCreatedBySetup | type == "boolean")
@@ -237,6 +266,8 @@ jq -e \
 jq -e \
   --arg dataplane_app_id "$(jq -r '.dataplaneAppId' /tmp/tidbcloud-byoc-setup-state.json)" \
   --arg deployment_app_id "$(jq -r '.deploymentAppId' /tmp/tidbcloud-byoc-setup-state.json)" \
+  --arg o11y_dns_zone_resource_group "$O11Y_DNS_ZONE_RESOURCE_GROUP" \
+  --arg o11y_dns_zone_root_domain "$O11Y_DNS_ZONE_ROOT_DOMAIN" \
   '.dataplane_app_id == $dataplane_app_id
     and .deployment_app_id == $deployment_app_id
     and (.customer_acr_resource_id | length > 0)
@@ -249,6 +280,8 @@ jq -e \
     and (.dataplane_admin_group_object_ids | length > 0)
     and (.tidb_cluster_dns_domain | length > 0)
     and (.tidb_cluster_dns_resource_group | length > 0)
+    and .o11y_dns_domain == $o11y_dns_zone_root_domain
+    and .o11y_dns_resource_group == $o11y_dns_zone_resource_group
     and (.storage_accounts_resource_group | length > 0)
     and (.o11y_identity_resource_group | length > 0)
     and (.o11y_aks_resource_group | length > 0)
@@ -269,7 +302,7 @@ Pass criteria:
 - Both JSON documents parse with `jq`.
 - `setupState.deployName`, `tenantId`, `subscriptionId`, and DNS fields match
   the expected setup contract.
-- `customerOnboarding` contains app IDs, ACR, audit log, AKS identity, DNS, storage, and O11Y
+- `customerOnboarding` contains app IDs, ACR, audit log, AKS identity, TiDB and O11Y DNS, storage, and O11Y
   fields needed by auto-deploy.
 - `customerOnboarding.dataplane_app_id` matches `setupState.dataplaneAppId`.
 - `customerOnboarding.deployment_app_id` matches `setupState.deploymentAppId`.
@@ -375,7 +408,10 @@ O11Y_VELERO_PRINCIPAL_ID=$(az identity show --resource-group "$O11Y_RESOURCE_GRO
 O11Y_AGIC_PRINCIPAL_ID=$(az identity show --resource-group "$O11Y_RESOURCE_GROUP" --name o11y-agic --query principalId -o tsv)
 DNS_RESOURCE_GROUP_SCOPE="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${DNS_ZONE_RESOURCE_GROUP}"
 DNS_SCOPE="${DNS_RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/dnsZones/${DNS_ZONE_ROOT_DOMAIN}"
+O11Y_DNS_RESOURCE_GROUP_SCOPE="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${O11Y_DNS_ZONE_RESOURCE_GROUP}"
+O11Y_DNS_SCOPE="${O11Y_DNS_RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/dnsZones/${O11Y_DNS_ZONE_ROOT_DOMAIN}"
 INITIAL_DEPLOY_ROLE="Contributor"
+DNS_ZONE_CONTRIBUTOR_ROLE="DNS Zone Contributor"
 STORAGE_BLOB_DATA_CONTRIBUTOR_ROLE="Storage Blob Data Contributor"
 STORAGE_ACCOUNT_KEY_OPERATOR_ROLE="Storage Account Key Operator Service Role"
 READER_ROLE="Reader"
@@ -417,6 +453,10 @@ az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "$DNS_SCOPE
 az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "$DNS_SCOPE" -o json \
   | jq --arg role "$DATAPLANE_DNS_ROLE" '[.[] | select(.roleDefinitionName == $role)][0]' \
   | tee /tmp/tidbcloud-byoc-dataplane-dns-role-assignment.json | jq .
+az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$O11Y_DNS_SCOPE" -o table
+az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$O11Y_DNS_SCOPE" -o json \
+  | jq --arg role "$DNS_ZONE_CONTRIBUTOR_ROLE" '[.[] | select(.roleDefinitionName == $role)][0]' \
+  | tee /tmp/tidbcloud-byoc-o11y-dns-role-assignment.json | jq .
 
 az role definition list --name "$DATAPLANE_DNS_ROLE" --scope "$DNS_RESOURCE_GROUP_SCOPE" -o json \
   | jq '.[0]' | tee /tmp/tidbcloud-byoc-dataplane-dns-role.json \
@@ -543,6 +583,11 @@ jq -e --arg role "$DATAPLANE_DNS_ROLE" --arg scope "$DNS_SCOPE" '
   and (.scope | ascii_downcase) == ($scope | ascii_downcase)
 ' /tmp/tidbcloud-byoc-dataplane-dns-role-assignment.json >/dev/null
 
+jq -e --arg role "$DNS_ZONE_CONTRIBUTOR_ROLE" --arg scope "$O11Y_DNS_SCOPE" '
+  .roleDefinitionName == $role
+  and (.scope | ascii_downcase) == ($scope | ascii_downcase)
+' /tmp/tidbcloud-byoc-o11y-dns-role-assignment.json >/dev/null
+
 jq -e '
   ((.actions // []) | sort) == ([
     "Microsoft.Resources/subscriptions/resourceGroups/read",
@@ -575,6 +620,7 @@ Pass criteria:
 - Deployment app has persistent `Contributor` at ACR scope.
 - Dataplane app has dataplane custom role at BYOC subscription scope.
 - Dataplane app has DNS record custom role at the public DNS zone scope, in the public DNS zone subscription.
+- Deployment app has temporary `DNS Zone Contributor` at the O11Y public DNS zone scope.
 - Dataplane app is a member of the AKS admin group.
 - `o11y-velero` has `Storage Blob Data Contributor`, `Storage Account Key Operator Service Role`, and `Reader` at the O11Y storage resource group scope.
 - `o11y-agic` has the custom O11Y AGIC operator role at the BYOC subscription scope.
@@ -600,6 +646,8 @@ bash tidbcloud-byoc-setup.sh \
   --dns-zone-subscription-id "$DNS_ZONE_SUBSCRIPTION_ID" \
   --dns-zone-resource-group "$DNS_ZONE_RESOURCE_GROUP" \
   --dns-zone-root-domain "$DNS_ZONE_ROOT_DOMAIN" \
+  --o11y-dns-zone-resource-group "$O11Y_DNS_ZONE_RESOURCE_GROUP" \
+  --o11y-dns-zone-root-domain "$O11Y_DNS_ZONE_ROOT_DOMAIN" \
   --deployment-app-id "$DEPLOYMENT_APP_ID" \
   --dataplane-app-id "$DATAPLANE_APP_ID" \
   | tee /tmp/tidbcloud-byoc-setup-second-run.out
@@ -629,6 +677,12 @@ if az stack sub show --name "cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-initial-de
   exit 1
 fi
 
+DEPLOYMENT_SP_OBJECT_ID=$(az ad sp show --id "$DEPLOYMENT_APP_ID" --query id -o tsv)
+O11Y_DNS_SCOPE="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${O11Y_DNS_ZONE_RESOURCE_GROUP}/providers/Microsoft.Network/dnsZones/${O11Y_DNS_ZONE_ROOT_DOMAIN}"
+az account set --subscription "$DNS_ZONE_SUBSCRIPTION_ID"
+test -z "$(az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$O11Y_DNS_SCOPE" --query '[].id' -o tsv)"
+az account set --subscription "$SUBSCRIPTION_ID"
+
 bash tidbcloud-byoc-revoke-initial-deploy-access.sh \
   --deploy-name "$DEPLOY_NAME" \
   --subscription-id "$SUBSCRIPTION_ID" \
@@ -639,6 +693,7 @@ Pass criteria:
 
 - First revoke deletes the initial deployment access stack.
 - Second revoke exits successfully and reports already revoked or missing.
+- Temporary O11Y DNS access is removed.
 - ACR and dataplane access remain.
 
 ## 7. Update Script
@@ -700,11 +755,13 @@ ACR_NAME=$(jq -r '.acrName' "$STATE")
 AKS_ADMIN_GROUP_OBJECT_ID=$(jq -r '.aksAdminGroupObjectId' "$STATE")
 DNS_RESOURCE_GROUP_SCOPE="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${DNS_ZONE_RESOURCE_GROUP}"
 DNS_SCOPE="${DNS_RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/dnsZones/${DNS_ZONE_ROOT_DOMAIN}"
+O11Y_DNS_SCOPE="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${O11Y_DNS_ZONE_RESOURCE_GROUP}/providers/Microsoft.Network/dnsZones/${O11Y_DNS_ZONE_ROOT_DOMAIN}"
 
 test -z "$(az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" --query '[].id' -o tsv)"
 test -z "$(az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$ACR_RESOURCE_ID" --query '[].id' -o tsv)"
 test -z "$(az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" --query '[].id' -o tsv)"
 az account set --subscription "$DNS_ZONE_SUBSCRIPTION_ID"
+test -z "$(az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$O11Y_DNS_SCOPE" --query '[].id' -o tsv)"
 test -z "$(az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "$DNS_SCOPE" --query '[].id' -o tsv)"
 az account set --subscription "$SUBSCRIPTION_ID"
 test "$(az ad group member check --group "$AKS_ADMIN_GROUP_OBJECT_ID" --member-id "$DATAPLANE_SP_OBJECT_ID" --query value -o tsv)" = "false"
@@ -716,7 +773,7 @@ az stack sub show --name "cust-${DEPLOY_NAME}-tidbcloud-byoc-setup-state" --quer
 Pass criteria:
 
 - PingCAP app RBAC and AKS admin group membership are removed.
-- Deployment application temporary subscription access is removed.
+- Deployment application temporary subscription and O11Y DNS access is removed.
 - Enterprise applications remain because `--keep-enterprise-apps` was set.
 - Customer resources and onboarding state remain.
 
@@ -735,6 +792,8 @@ bash tidbcloud-byoc-setup.sh \
   --dns-zone-subscription-id "$DNS_ZONE_SUBSCRIPTION_ID" \
   --dns-zone-resource-group "$DNS_ZONE_RESOURCE_GROUP" \
   --dns-zone-root-domain "$DNS_ZONE_ROOT_DOMAIN" \
+  --o11y-dns-zone-resource-group "$O11Y_DNS_ZONE_RESOURCE_GROUP" \
+  --o11y-dns-zone-root-domain "$O11Y_DNS_ZONE_ROOT_DOMAIN" \
   --deployment-app-id "$DEPLOYMENT_APP_ID" \
   --dataplane-app-id "$DATAPLANE_APP_ID"
 ```
@@ -798,7 +857,7 @@ Pass criteria:
 - Setup-created stacks and non-ACR resource groups are deleted.
 - ACR remains.
 - Enterprise applications remain.
-- Customer-prepared DNS zone remains.
+- Customer-prepared DNS zones remain.
 
 ### 9.2 Full Reset Deletes ACR And Enterprise Apps
 
@@ -817,6 +876,8 @@ bash tidbcloud-byoc-setup.sh \
   --dns-zone-subscription-id "$DNS_ZONE_SUBSCRIPTION_ID" \
   --dns-zone-resource-group "$DNS_ZONE_RESOURCE_GROUP" \
   --dns-zone-root-domain "$DNS_ZONE_ROOT_DOMAIN" \
+  --o11y-dns-zone-resource-group "$O11Y_DNS_ZONE_RESOURCE_GROUP" \
+  --o11y-dns-zone-root-domain "$O11Y_DNS_ZONE_ROOT_DOMAIN" \
   --deployment-app-id "$DEPLOYMENT_APP_ID" \
   --dataplane-app-id "$DATAPLANE_APP_ID"
 ```
@@ -840,7 +901,7 @@ Pass criteria:
 
 - Setup stacks, setup resource groups, ACR, AKS admin group, and PingCAP
   enterprise applications are deleted.
-- Customer-prepared public DNS zone remains.
+- Customer-prepared public DNS zones remain.
 
 ## 10. Required Scenario Matrix
 
@@ -848,8 +909,8 @@ Run the full plan for at least these variants:
 
 | Variant | Required? | Notes |
 |---|---:|---|
-| DNS zone in same BYOC subscription | Yes | Validates single-subscription assignable scope |
-| DNS zone in separate subscription | Yes | Validates cross-subscription DNS RBAC |
+| DNS zones in same BYOC subscription | Yes | Validates single-subscription assignable scope |
+| DNS zones in separate subscription | Yes | Validates cross-subscription DNS RBAC for TiDB and O11Y zones |
 | Default generated ACR names | Yes | Validates deterministic naming |
 | Custom ACR resource group and name | Yes | Add `--acr-resource-group` and `--acr-name` to setup |
 | Reused existing ACR | Yes | Add `--acr-resource-group`, `--acr-name`, and `--reuse-acr`; verify the deploy stack does not manage the ACR resource group or registry, onboarding still contains ACR fields, and reset never deletes the reused ACR |
@@ -867,7 +928,8 @@ Deploy name:
 Tenant ID:
 BYOC subscription:
 DNS subscription:
-DNS zone:
+TiDB DNS zone:
+O11Y DNS zone:
 Location:
 
 Local validation:

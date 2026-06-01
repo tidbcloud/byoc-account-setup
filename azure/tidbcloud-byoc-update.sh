@@ -47,6 +47,8 @@ TENANT_ID=$(jq -r '.tenantId' <<<"$SETUP_STATE_JSON")
 DNS_ZONE_SUBSCRIPTION_ID=$(jq -r '.dnsZoneSubscriptionId' <<<"$SETUP_STATE_JSON")
 DNS_ZONE_RESOURCE_GROUP=$(jq -r '.dnsZoneResourceGroupName' <<<"$SETUP_STATE_JSON")
 DNS_ZONE_ROOT_DOMAIN=$(jq -r '.dnsZoneName' <<<"$SETUP_STATE_JSON")
+O11Y_DNS_ZONE_RESOURCE_GROUP=$(jq -r '.o11yDnsZoneResourceGroupName // empty' <<<"$SETUP_STATE_JSON")
+O11Y_DNS_ZONE_ROOT_DOMAIN=$(jq -r '.o11yDnsZoneName // empty' <<<"$SETUP_STATE_JSON")
 DEPLOYMENT_APP_ID=$(jq -r '.deploymentAppId' <<<"$SETUP_STATE_JSON")
 DATAPLANE_APP_ID=$(jq -r '.dataplaneAppId' <<<"$SETUP_STATE_JSON")
 DEPLOYMENT_RESOURCE_GROUP=$(jq -r '.deploymentResourceGroupName' <<<"$SETUP_STATE_JSON")
@@ -66,6 +68,13 @@ AKS_CONTROL_PLANE_IDENTITY_NAME=$(jq -r '.aksControlPlaneIdentityName' <<<"$SETU
 AKS_KUBELET_IDENTITY_NAME=$(jq -r '.aksKubeletIdentityName' <<<"$SETUP_STATE_JSON")
 O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME=tidbcloud-${DEPLOY_NAME}-o11y-aks-control-plane
 O11Y_AKS_KUBELET_IDENTITY_NAME=tidbcloud-${DEPLOY_NAME}-o11y-aks-kubelet
+
+require_o11y_dns_state() {
+  if [[ -z "$O11Y_DNS_ZONE_RESOURCE_GROUP" || "$O11Y_DNS_ZONE_RESOURCE_GROUP" == "null" || -z "$O11Y_DNS_ZONE_ROOT_DOMAIN" || "$O11Y_DNS_ZONE_ROOT_DOMAIN" == "null" ]]; then
+    echo "Error: onboarding state is missing O11Y DNS fields. Re-run tidbcloud-byoc-setup.sh with --o11y-dns-zone-resource-group and --o11y-dns-zone-root-domain." >&2
+    exit 1
+  fi
+}
 
 ensure_service_principal() {
   local app_id=$1
@@ -112,10 +121,12 @@ update_deploy() {
     deployName="$DEPLOY_NAME" location="$LOCATION" deploymentPrincipalObjectId="$deployment_sp_object_id" deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrName="$ACR_NAME" createAcr="$ACR_CREATED_BY_SETUP"
 }
 update_initial_deploy_access() {
+  require_o11y_dns_state
   local deployment_sp_object_id
   deployment_sp_object_id=$(ensure_service_principal "$DEPLOYMENT_APP_ID")
   deploy_stack_delete_unmanaged "$INITIAL_DEPLOY_ACCESS_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-initial-deploy-access.bicep" \
-    deploymentPrincipalObjectId="$deployment_sp_object_id"
+    deploymentPrincipalObjectId="$deployment_sp_object_id" \
+    o11yDnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" o11yDnsZoneResourceGroupName="$O11Y_DNS_ZONE_RESOURCE_GROUP" o11yDnsZoneName="$O11Y_DNS_ZONE_ROOT_DOMAIN"
 }
 update_dataplane() {
   local dataplane_sp_object_id
@@ -135,9 +146,11 @@ update_o11y() {
     o11yAksControlPlaneIdentityName="$O11Y_AKS_CONTROL_PLANE_IDENTITY_NAME" o11yAksKubeletIdentityName="$O11Y_AKS_KUBELET_IDENTITY_NAME"
 }
 update_state() {
+  require_o11y_dns_state
   deploy_stack_delete_unmanaged "$STATE_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-state.bicep" \
     deployName="$DEPLOY_NAME" location="$LOCATION" tenantId="$TENANT_ID" subscriptionId="$SUBSCRIPTION_ID" \
     dnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" dnsZoneResourceGroupName="$DNS_ZONE_RESOURCE_GROUP" dnsZoneName="$DNS_ZONE_ROOT_DOMAIN" \
+    o11yDnsZoneResourceGroupName="$O11Y_DNS_ZONE_RESOURCE_GROUP" o11yDnsZoneName="$O11Y_DNS_ZONE_ROOT_DOMAIN" \
     deploymentAppId="$DEPLOYMENT_APP_ID" dataplaneAppId="$DATAPLANE_APP_ID" \
     deploymentResourceGroupName="$DEPLOYMENT_RESOURCE_GROUP" acrResourceGroupName="$ACR_RESOURCE_GROUP" acrCreatedBySetup="$ACR_CREATED_BY_SETUP" storageResourceGroupName="$STORAGE_RESOURCE_GROUP" identitiesResourceGroupName="$IDENTITIES_RESOURCE_GROUP" \
     o11yResourceGroupName="$O11Y_RESOURCE_GROUP" \
