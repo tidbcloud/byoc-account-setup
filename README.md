@@ -29,14 +29,27 @@ byoc-account-setup/
 │
 ├── bastion/                # Bastion host deployment scripts and documentation
 ├── iam_roles/              # IAM role creation scripts and policies
-└── aws_sec_conf_check/     # Optional AWS environment security validation tools
+├── aws_sec_conf_check/     # Optional AWS environment security validation tools
+└── azure/                  # Azure BYOC account setup scripts, Bicep templates, and documentation
 ```
 
 ---
 
 ## Directory Details
 
-### 1. `bastion`
+### 1. `azure`
+
+**Purpose:**
+Prepare Azure subscriptions for TiDB Cloud BYOC workloads.
+
+This directory contains Azure setup documentation, Bicep templates, and lifecycle scripts for creating the customer-side BYOC resources, managed identities, role assignments, onboarding state, and cleanup/revocation workflows.
+
+**Customer Actions:**
+Follow the instructions in `azure/README.md` to prepare the Azure subscription and public DNS zone, then run the setup script and provide the onboarding state details to the PingCAP Support Team.
+
+---
+
+### 2. `bastion`
 
 **Purpose:**
 Deploy the bastion host required for the TiDB Cloud BYOC environment.
@@ -54,7 +67,7 @@ After deployment, provide the output details to the PingCAP Support Team.
 
 ---
 
-### 2. `iam_roles`
+### 3. `iam_roles`
 
 **Purpose:**
 Help customers pre-create the minimal IAM roles required for running the TiDB Cloud Data Plane.
@@ -66,7 +79,7 @@ Once deployed, these roles allow the TiDB Cloud Data Plane and related component
 
 ---
 
-### 3. `aws_sec_conf_check`
+### 4. `aws_sec_conf_check`
 
 **Purpose:**
 Provide an optional set of scripts for checking the security configuration of the customer's AWS environment.
@@ -86,9 +99,10 @@ For detailed usage instructions, refer to the `aws_sec_conf_check/README`.
 
 Before using any script in this repository, ensure that:
 
-1. You have the necessary IAM permissions to operate within your own AWS environment.
-2. [Terraform](https://developer.hashicorp.com/terraform/downloads) and [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) are installed and properly configured.
-3. You have obtained the relevant contact information for technical support from the TiDB Cloud Support Team.
+1. You have the necessary permissions to operate within your own cloud environment.
+2. For AWS setup paths, [Terraform](https://developer.hashicorp.com/terraform/downloads) and [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) are installed and properly configured.
+3. For Azure setup paths, Azure CLI with Bicep support is installed and logged in to the expected tenant. Some lifecycle scripts also require `jq`.
+4. You have obtained the relevant contact information for technical support from the TiDB Cloud Support Team.
 
 ---
 
@@ -101,7 +115,7 @@ Before using any script in this repository, ensure that:
   Do not store sensitive variables (e.g., `auth_key`, `tenant_id`) in plaintext or in any public repositories.
 
 - **Logging and Auditing:**
-  After the bastion host is deployed, logs will automatically be forwarded to a dedicated AWS CloudWatch log group for audit and monitoring purposes.
+  Follow the cloud-specific README for audit logging details. AWS bastion logs are forwarded to a dedicated AWS CloudWatch log group, and Azure BYOC setup creates Blob Storage for audit logs.
 
 ---
 

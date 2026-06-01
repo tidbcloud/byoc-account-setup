@@ -11,7 +11,9 @@ Do not run reset tests against production or shared customer environments.
 Create a local environment file for the test run:
 
 ```bash
-cat > /tmp/tidbcloud-byoc-azure-test.env <<'EOF'
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+cat > /tmp/tidbcloud-byoc-azure-test.env <<EOF
 export DEPLOY_NAME="test-deploy-001"
 export LOCATION="eastus"
 export TENANT_ID="<tenant-id>"
@@ -22,7 +24,7 @@ export DNS_ZONE_ROOT_DOMAIN="<dns-zone-root-domain>"
 export DEPLOYMENT_APP_ID="<deployment-app-client-id>"
 export DATAPLANE_APP_ID="<dataplane-app-client-id>"
 
-export AZURE_DIR="/Volumes/T9/tidbcloud/byoc-account-setup/azure"
+export AZURE_DIR="${REPO_ROOT}/azure"
 EOF
 
 source /tmp/tidbcloud-byoc-azure-test.env
