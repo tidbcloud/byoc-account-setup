@@ -61,11 +61,18 @@ Resources:
               - Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies
-                  - iam:PassRole
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-node-role
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-cluster-role
+              - Action:
+                  - iam:PassRole
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: eks.amazonaws.com
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-node-role
               - Action:
                   - ecr:BatchCheckLayerAvailability
                   - ecr:GetDownloadUrlForLayer
