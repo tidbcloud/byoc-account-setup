@@ -60,6 +60,21 @@ Resources:
                   - ecr:BatchGetImage
                   - ecr:DescribeImages
                   - ecr:ListImages
+                  - eks:DescribeCluster
+                  - eks:ListNodegroups
+                  - eks:DescribeNodegroup
+                  - eks:UpdateClusterVersion
+                  - eks:DescribeAddon
+                  - eks:UpdateAddon
+                  - eks:UpdateNodegroupVersion
+                  - eks:CreateNodegroup
+                  - eks:DeleteNodegroup
+                  - eks:ListAddons
+                  - eks:TagResource
+                  - ec2:DescribeLaunchTemplateVersions
+                  - iam:PassRole
+                  - iam:GetRole
+                  - iam:ListAttachedRolePolicies
                 Effect: Allow
                 Resource: "*"
         - PolicyName: ExternalDNSPolicy
