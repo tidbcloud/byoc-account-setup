@@ -86,17 +86,19 @@ Resources:
                     aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
               - Action:
-                  - eks:DescribeCluster
-                  - eks:ListNodegroups
-                  - eks:ListAddons
-                  - eks:UpdateClusterVersion
-                  - eks:CreateNodegroup
-                  - eks:DescribeAddon
-                  - eks:UpdateAddon
-                  - eks:DescribeNodegroup
-                  - eks:UpdateNodegroupVersion
-                  - eks:DeleteNodegroup
+                  - eks:CreateCluster
                   - eks:TagResource
+                  - eks:CreateNodegroup
+                  - eks:CreateAddon
+                  - eks:UpdateClusterVersion
+                  - eks:UpdateClusterConfig
+                  - eks:UpdateNodegroupConfig
+                  - eks:UpdateNodegroupVersion
+                  - eks:UpdateAddon
+                  - eks:DeleteCluster
+                  - eks:DeleteNodeGroup
+                  - eks:DeleteAddon
+                  - eks:UntagResource
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
