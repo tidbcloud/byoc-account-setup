@@ -75,6 +75,8 @@ Resources:
                 Condition:
                   StringEquals:
                     aws:ResourceTag/ManagedBy: PingCAP
+                Resource:
+                  - "*"
                 Effect: Allow
               - Action:
                   - eks:CreateCluster
