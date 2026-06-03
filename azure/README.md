@@ -255,7 +255,7 @@ The setup grants these RBAC roles:
 | O11Y AKS kubelet identity | ACR: `AcrPull` | Allow O11Y AKS workloads to pull container images |
 | O11Y AKS control-plane identity | Required network scope: `Network Contributor`; O11Y AKS kubelet identity: `Managed Identity Operator` | Allow O11Y AKS to manage required network resources and use the pre-created kubelet identity |
 | `o11y-agic` | BYOC subscription: custom `TiDB BYOC O11Y AGIC Operator - <deployName>` | Manage the O11Y Application Gateway, join required subnets, and read related network resources for ingress reconciliation |
-| `o11y-regional-server` | O11Y AKS/network resource group: `Owner`, `Network Contributor`; O11Y storage resource group: `Owner`, `Storage Blob Data Owner` | Manage O11Y AKS, network, storage, and blob data resources |
+| `o11y-regional-server` | ACR: `AcrPull`; O11Y AKS/network resource group: `Owner`, `Network Contributor`; O11Y storage resource group: `Owner`, `Storage Blob Data Owner` | Pull required container images and manage O11Y AKS, network, storage, and blob data resources |
 | `o11y-vmbackup` | O11Y storage resource group: `Storage Blob Data Contributor` | Read and write VM backup blob data |
 | `o11y-loki` | O11Y storage resource group: `Storage Blob Data Contributor` | Read and write Loki blob data |
 | `o11y-velero` | O11Y storage resource group: `Storage Blob Data Contributor`, `Storage Account Key Operator Service Role`, `Reader` | Read and write Velero backup blob data, read storage resource metadata, and access storage account keys |

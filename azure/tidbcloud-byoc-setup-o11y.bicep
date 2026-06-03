@@ -195,6 +195,17 @@ module o11yAksAcrPullAssignment './modules/acr-role-assignment.bicep' = {
   }
 }
 
+module regionalServerAcrPullAssignment './modules/acr-role-assignment.bicep' = {
+  name: 'o11y-regional-server-acr-pull-assignment'
+  scope: resourceGroup(acrSubscriptionId, acrResourceGroupName)
+  params: {
+    acrName: acrName
+    principalId: o11yIdentities.outputs.regionalServerPrincipalId
+    roleDefinitionId: acrPullRoleDefinitionId
+    assignmentGuidSeed: regionalServerIdentityResourceId
+  }
+}
+
 output o11yResourceGroupName string = o11yResourceGroup.name
 output o11yInfraResourceGroupName string = o11yInfraResourceGroup.name
 output o11yStorageResourceGroupName string = o11yStorageResourceGroup.name
