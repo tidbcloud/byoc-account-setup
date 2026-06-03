@@ -106,19 +106,6 @@ ensure_group_member() {
   fi
 }
 
-find_o11y_dns_role_assignment_name() {
-  local principal_id=$1
-  local role_definition_id="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/providers/Microsoft.Authorization/roleDefinitions/befefa01-2a29-4197-83a8-272ff33ce314"
-  local scope="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${O11Y_DNS_ZONE_RESOURCE_GROUP}/providers/Microsoft.Network/dnsZones/${O11Y_DNS_ZONE_ROOT_DOMAIN}"
-
-  az role assignment list \
-    --subscription "$DNS_ZONE_SUBSCRIPTION_ID" \
-    --assignee "$principal_id" \
-    --scope "$scope" \
-    --query "[?roleDefinitionId=='${role_definition_id}'] | [0].name" \
-    -o tsv 2>/dev/null || true
-}
-
 deploy_stack() {
   local name=$1 template=$2; shift 2
   az stack sub create --name "$name" --location "$LOCATION" --template-file "$template" --action-on-unmanage detachAll --deny-settings-mode none --yes --output none --parameters "$@"
@@ -137,12 +124,9 @@ update_initial_deploy_access() {
   require_o11y_dns_state
   local deployment_sp_object_id
   deployment_sp_object_id=$(ensure_service_principal "$DEPLOYMENT_APP_ID")
-  local o11y_dns_role_assignment_name
-  o11y_dns_role_assignment_name=$(find_o11y_dns_role_assignment_name "$deployment_sp_object_id")
   deploy_stack_delete_unmanaged "$INITIAL_DEPLOY_ACCESS_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-initial-deploy-access.bicep" \
     deploymentPrincipalObjectId="$deployment_sp_object_id" \
-    o11yDnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" o11yDnsZoneResourceGroupName="$O11Y_DNS_ZONE_RESOURCE_GROUP" o11yDnsZoneName="$O11Y_DNS_ZONE_ROOT_DOMAIN" \
-    o11yDnsRoleAssignmentName="$o11y_dns_role_assignment_name"
+    o11yDnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" o11yDnsZoneResourceGroupName="$O11Y_DNS_ZONE_RESOURCE_GROUP" o11yDnsZoneName="$O11Y_DNS_ZONE_ROOT_DOMAIN"
 }
 update_dataplane() {
   local dataplane_sp_object_id
