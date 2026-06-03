@@ -132,11 +132,25 @@ ensure_group_member() {
   fi
 }
 
+find_o11y_dns_role_assignment_name() {
+  local principal_id=$1
+  local role_definition_id="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/providers/Microsoft.Authorization/roleDefinitions/befefa01-2a29-4197-83a8-272ff33ce314"
+  local scope="/subscriptions/${DNS_ZONE_SUBSCRIPTION_ID}/resourceGroups/${O11Y_DNS_ZONE_RESOURCE_GROUP}/providers/Microsoft.Network/dnsZones/${O11Y_DNS_ZONE_ROOT_DOMAIN}"
+
+  az role assignment list \
+    --subscription "$DNS_ZONE_SUBSCRIPTION_ID" \
+    --assignee "$principal_id" \
+    --scope "$scope" \
+    --query "[?roleDefinitionId=='${role_definition_id}'] | [0].name" \
+    -o tsv 2>/dev/null || true
+}
+
 echo "Ensuring enterprise applications and AKS admin group..."
 DEPLOYMENT_SP_OBJECT_ID=$(ensure_service_principal "$DEPLOYMENT_APP_ID")
 DATAPLANE_SP_OBJECT_ID=$(ensure_service_principal "$DATAPLANE_APP_ID")
 AKS_ADMIN_GROUP_OBJECT_ID=$(ensure_group "$AKS_ADMIN_GROUP_NAME")
 ensure_group_member "$AKS_ADMIN_GROUP_OBJECT_ID" "$DATAPLANE_SP_OBJECT_ID"
+O11Y_DNS_ROLE_ASSIGNMENT_NAME=$(find_o11y_dns_role_assignment_name "$DEPLOYMENT_SP_OBJECT_ID")
 
 CREATE_ACR=true
 if [[ "$REUSE_ACR" == "true" ]]; then
@@ -178,7 +192,8 @@ deploy_stack "$DEPLOY_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-deploy.bic
 echo "Creating or updating deployment stack: initial deploy access"
 deploy_stack_delete_unmanaged "$INITIAL_DEPLOY_ACCESS_STACK_NAME" "${SCRIPT_DIR}/tidbcloud-byoc-setup-initial-deploy-access.bicep" \
   deploymentPrincipalObjectId="$DEPLOYMENT_SP_OBJECT_ID" \
-  o11yDnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" o11yDnsZoneResourceGroupName="$O11Y_DNS_ZONE_RESOURCE_GROUP" o11yDnsZoneName="$O11Y_DNS_ZONE_ROOT_DOMAIN"
+  o11yDnsZoneSubscriptionId="$DNS_ZONE_SUBSCRIPTION_ID" o11yDnsZoneResourceGroupName="$O11Y_DNS_ZONE_RESOURCE_GROUP" o11yDnsZoneName="$O11Y_DNS_ZONE_ROOT_DOMAIN" \
+  o11yDnsRoleAssignmentName="$O11Y_DNS_ROLE_ASSIGNMENT_NAME"
 
 ACR_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${ACR_RESOURCE_GROUP}/providers/Microsoft.ContainerRegistry/registries/${ACR_NAME}"
 

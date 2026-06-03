@@ -4,6 +4,7 @@ param deploymentPrincipalObjectId string
 param o11yDnsZoneSubscriptionId string
 param o11yDnsZoneResourceGroupName string
 param o11yDnsZoneName string
+param o11yDnsRoleAssignmentName string = ''
 
 // Azure built-in Contributor role. This is temporary and is revoked by
 // deleting the initial deploy access stack after the first BYOC deployment.
@@ -28,6 +29,7 @@ module o11yDnsZoneContributorAssignment './modules/dns-zone-role-assignment.bice
     dnsZoneName: o11yDnsZoneName
     principalId: deploymentPrincipalObjectId
     roleDefinitionId: dnsZoneContributorRoleDefinitionId
+    roleAssignmentName: o11yDnsRoleAssignmentName
   }
 }
 
