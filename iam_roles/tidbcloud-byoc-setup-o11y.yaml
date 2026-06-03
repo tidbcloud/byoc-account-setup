@@ -61,18 +61,11 @@ Resources:
               - Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies
+                  - iam:PassRole
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-node-role
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-cluster-role
-              - Action:
-                  - iam:PassRole
-                Condition:
-                  StringEquals:
-                    iam:PassedToService: eks.amazonaws.com
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-node-role
               - Action:
                   - ecr:BatchCheckLayerAvailability
                   - ecr:GetDownloadUrlForLayer
@@ -83,63 +76,17 @@ Resources:
                   StringEquals:
                     aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
-                Resource:
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/deadmanswatch
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/diagnosis-query
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/ingress-nginx/controller
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/o11ydiagnosis
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/observability-ops-server
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/observability-regional-data-server
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/observability-regional-server
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/observability-regional-task-collector
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/observability/vmbackupmanager
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/amazon/aws-load-balancer-controller
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/autoscaling/cluster-autoscaler
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/devopsnirvana/kubernetes-volume-autoscaler
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/external-dns/external-dns
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/grafana/loki
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/jetstack/cert-manager-cainjector
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/jetstack/cert-manager-controller
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/jetstack/cert-manager-webhook
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/jimmidyson/configmap-reload
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/kiwigrid/k8s-sidecar
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/kube-state-metrics/kube-state-metrics
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/prometheus-operator/prometheus-config-reloader
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/prometheus-operator/prometheus-operator
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/prometheus/alertmanager
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/prometheus/node-exporter
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/prometheus/prometheus
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/velero/velero
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/third-party/victoriametrics/operator
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/tidbcloud/eventrouter
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/tidbcloud/vector
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/victoriametrics/vmalert
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/victoriametrics/vminsert
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/victoriametrics/vmselect
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/victoriametrics/vmstorage
               - Action:
                   - eks:DescribeCluster
                   - eks:ListNodegroups
                   - eks:ListAddons
                   - eks:UpdateClusterVersion
                   - eks:CreateNodegroup
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-              - Action:
                   - eks:DescribeAddon
                   - eks:UpdateAddon
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*/*
-              - Action:
                   - eks:DescribeNodegroup
                   - eks:UpdateNodegroupVersion
                   - eks:DeleteNodegroup
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*/*
-              - Action:
                   - eks:TagResource
                 Effect: Allow
                 Resource:
