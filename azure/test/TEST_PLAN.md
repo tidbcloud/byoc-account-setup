@@ -593,6 +593,7 @@ jq -e '
     "Microsoft.Resources/subscriptions/resourceGroups/read",
     "Microsoft.Network/applicationGateways/*",
     "Microsoft.Network/applicationGatewayWebApplicationFirewallPolicies/read",
+    "Microsoft.Network/applicationGatewayWebApplicationFirewallPolicies/join/action",
     "Microsoft.Network/virtualNetworks/read",
     "Microsoft.Network/virtualNetworks/subnets/read",
     "Microsoft.Network/virtualNetworks/subnets/join/action",
@@ -629,7 +630,7 @@ Pass criteria:
 - Dataplane custom role has blob read DataAction only with a subscription role-assignment condition that allows `Blob.List` and denies blob content reads.
 - Dataplane custom role does not include public DNS zone actions or copied `DNS Zone Contributor` support actions.
 - Dataplane DNS record custom role includes only DNS zone read and DNS A record read/write/delete actions.
-- O11Y AGIC custom role includes Application Gateway management actions, subnet join, and supporting read-only network actions, and does not grant broad `Contributor`.
+- O11Y AGIC custom role includes Application Gateway management actions, subnet join, WAF policy join, and supporting read-only network actions, and does not grant broad `Contributor`.
 
 ## 5. Idempotency
 

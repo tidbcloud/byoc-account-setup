@@ -17,6 +17,7 @@ resource agicRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
           'Microsoft.Resources/subscriptions/resourceGroups/read'
           'Microsoft.Network/applicationGateways/*'
           'Microsoft.Network/applicationGatewayWebApplicationFirewallPolicies/read'
+          'Microsoft.Network/applicationGatewayWebApplicationFirewallPolicies/join/action'
           'Microsoft.Network/virtualNetworks/read'
           'Microsoft.Network/virtualNetworks/subnets/read'
           'Microsoft.Network/virtualNetworks/subnets/join/action'
