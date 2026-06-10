@@ -45,10 +45,25 @@ Resources:
                   - ec2:DescribeVpcEndpointServices
                   - ec2:DescribeVpcEndpointServicePermissions
                   - ec2:DescribeVpcEndpointServiceConfigurations
+                  - ec2:DescribeLaunchTemplateVersions
+                  - ecr:GetAuthorizationToken
+                  - sts:GetCallerIdentity
+                Effect: Allow
+                Resource: "*"
+              - Action:
                   - ec2:CreateVpcEndpointServiceConfiguration
+                Effect: Allow
+                Resource: "*"
+              - Action:
                   - ec2:ModifyVpcEndpointServicePermissions
                   - ec2:ModifyVpcEndpointServiceConfiguration
                   - ec2:DeleteVpcEndpointServiceConfigurations
+                Effect: Allow
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
+              - Action:
                   - s3:CreateBucket
                   - s3:GetObject
                   - s3:PutObject
@@ -58,12 +73,17 @@ Resources:
                   - s3:AbortMultipartUpload
                   - s3:ListMultipartUploadParts
                   - s3:ListBucket
-                  - sts:AssumeRole
-                  - sts:GetCallerIdentity
-                  - ec2:DescribeLaunchTemplateVersions
-                  - ecr:GetAuthorizationToken
                 Effect: Allow
-                Resource: "*"
+                Resource:
+                  - arn:aws:s3:::o11y-*
+                  - arn:aws:s3:::o11y-*/*
+                  - arn:aws:s3:::tidbcloud-*
+                  - arn:aws:s3:::tidbcloud-*/*
+              - Action:
+                  - sts:AssumeRole
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-*
               - Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies
@@ -306,11 +326,23 @@ Resources:
                 Action:
                   - ec2:DescribeVolumes
                   - ec2:DescribeSnapshots
-                  - ec2:CreateTags
+                Resource: "*"
+              - Effect: Allow
+                Action:
                   - ec2:CreateVolume
                   - ec2:CreateSnapshot
-                  - ec2:DeleteSnapshot
                 Resource: "*"
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/ManagedBy: PingCAP
+              - Effect: Allow
+                Action:
+                  - ec2:DeleteSnapshot
+                  - ec2:CreateTags
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
         - PolicyName: DeadmanswitchPolicy
           PolicyDocument:
             Version: "2012-10-17"
