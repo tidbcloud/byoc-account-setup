@@ -65,7 +65,7 @@ module o11yIdentities './modules/o11y-identity-resources.bicep' = {
 }
 
 module o11yAgicRoleAssignment './modules/o11y-agic-role-assignment.bicep' = {
-  name: 'o11y-agic-role-assignment'
+  name: 'o11y-agic-role-${uniqueString(subscription().id, deployName)}'
   params: {
     roleName: o11yAgicRoleName
     principalId: o11yIdentities.outputs.o11yAgicPrincipalId
