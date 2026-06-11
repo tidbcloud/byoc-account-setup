@@ -162,7 +162,8 @@ Each TiDB Cloud application receives only the access required for its responsibi
 |---|---|---|---|
 | Deployment application | Built-in `Contributor` | BYOC subscription | Temporary access to create initial BYOC infrastructure and read onboarding state. This access can be revoked after the first deployment completes |
 | Deployment application | Built-in `DNS Zone Contributor` | O11Y public DNS zone | Temporary access to manage O11Y DNS records during initial deployment. This access can be revoked after the first deployment completes |
-| Deployment application | Built-in `Contributor` | Customer ACR only | Query and push container images during daily management and upgrade workflows |
+| Deployment application | Built-in `AcrPush` | Customer ACR only | Pull existing image manifests and push container images during daily management and upgrade workflows |
+| Deployment application | Built-in `Reader` | Customer ACR only | Read ACR metadata required by Azure CLI login for image synchronization |
 | Dataplane management application | Custom `TiDB BYOC Dataplane Operator - <deployName>` | BYOC subscription | Manage TiDB dataplane resources after deployment |
 | Dataplane management application | Custom `TiDB BYOC Dataplane DNS Record Operator - <deployName>` | Public DNS zone | Create, update, read, and delete TiDB A records in the public DNS zone |
 
@@ -178,11 +179,11 @@ The same temporary deployment stack grants built-in `DNS Zone Contributor` on th
 
 ##### Deployment application ACR access
 
-The deployment application also receives built-in `Contributor` on the customer ACR only.
+The deployment application also receives built-in `AcrPush` and `Reader` on the customer ACR only.
 
-This ACR-scoped grant is intentionally kept after initial deployment. TiDB Cloud uses it to query existing ACR images and push required images before upgrade or maintenance workflows.
+This ACR-scoped grant is intentionally kept after initial deployment. TiDB Cloud uses `AcrPush` to pull existing image manifests and push required images before upgrade or maintenance workflows. TiDB Cloud uses `Reader` only to read ACR metadata needed by `az acr login`.
 
-`Contributor` on an ACR is broader than image push. It can manage that ACR resource, but only at the ACR scope; it does not grant access to the rest of the subscription.
+These roles do not grant ACR management permissions such as registry update/delete, private endpoint connection management, webhooks, tasks, tokens, or scope maps.
 
 ##### `TiDB BYOC Dataplane Operator - <deployName>`
 
@@ -195,7 +196,7 @@ This custom role should contain only the Azure permissions required for dataplan
 | AKS cluster credentials | Managed-cluster credential retrieval actions, such as `managedClusters/listCluster*Credential/action` |
 | Networking | `Microsoft.Network/virtualNetworks/*`, `Microsoft.Network/natGateways/*`, `Microsoft.Network/publicIPAddresses/*`, `Microsoft.Network/privateLinkServices/*`, `Microsoft.Network/privateEndpoints/*`, `Microsoft.Network/privateDnsZones/*`, `Microsoft.Network/networkInterfaces/read`, `Microsoft.Network/loadBalancers/read` |
 | Managed identity assignment | `Microsoft.ManagedIdentity/userAssignedIdentities/assign/action` |
-| Storage account management | `Microsoft.Storage/storageAccounts/read`, `Microsoft.Storage/storageAccounts/write`, `Microsoft.Storage/storageAccounts/delete`, `Microsoft.Storage/storageAccounts/listKeys/action` |
+| Storage account management | `Microsoft.Storage/storageAccounts/read`, `Microsoft.Storage/storageAccounts/write`, `Microsoft.Storage/storageAccounts/delete` |
 | Storage service and container management | `Microsoft.Storage/storageAccounts/blobServices/read`, `Microsoft.Storage/storageAccounts/fileServices/read`, `Microsoft.Storage/storageAccounts/blobServices/containers/read`, `Microsoft.Storage/storageAccounts/blobServices/containers/write`, `Microsoft.Storage/storageAccounts/blobServices/containers/delete` |
 | Storage lifecycle management | `Microsoft.Storage/storageAccounts/managementPolicies/read`, `Microsoft.Storage/storageAccounts/managementPolicies/write`, `Microsoft.Storage/storageAccounts/managementPolicies/delete` |
 | Blob data listing | Data action `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read`, with a subscription role-assignment condition that permits only the `Blob.List` suboperation and denies blob content reads |
@@ -348,7 +349,7 @@ bash tidbcloud-byoc-revoke-initial-deploy-access.sh \
   --yes
 ```
 
-This deletes only the temporary initial deployment access stack, including temporary BYOC subscription access and temporary O11Y DNS access. It does not delete the ACR, BYOC resource groups, dataplane resources, O11Y resources, or onboarding state. The deployment application keeps only ACR-scoped access for image query and image push during upgrades.
+This deletes only the temporary initial deployment access stack, including temporary BYOC subscription access and temporary O11Y DNS access. It does not delete the ACR, BYOC resource groups, dataplane resources, O11Y resources, or onboarding state. The deployment application keeps only ACR-scoped `AcrPush` and `Reader` access for image synchronization during upgrades.
 
 ### How do I update setup-managed resources after a template change?
 
@@ -381,7 +382,7 @@ For upgrades, TiDB Cloud keeps:
 
 | Access | Why it remains |
 |---|---|
-| Deployment application `Contributor` on the customer ACR | Query existing images to avoid duplicate synchronization and push images required by the upgrade |
+| Deployment application `AcrPush` and `Reader` on the customer ACR | Pull existing image manifests, push images required by the upgrade, and read ACR metadata required for Azure CLI login |
 | Dataplane management application `TiDB BYOC Dataplane Operator - <deployName>` | Manage TiDB dataplane resources during runtime operations |
 | Dataplane management application `TiDB BYOC Dataplane DNS Record Operator - <deployName>` | Manage TiDB A records in the public DNS zone |
 | Customer-owned managed identity assignments | Allow AKS and O11Y workloads to access customer-owned Azure resources |
@@ -449,7 +450,7 @@ bash tidbcloud-byoc-revoke-app-access.sh \
 This removes:
 
 - temporary initial deployment access;
-- Deployment application role assignments, including ACR-scoped `Contributor`;
+- Deployment application role assignments, including ACR-scoped `AcrPush` and `Reader`;
 - Dataplane management application role assignments;
 - Dataplane management application membership in the AKS admin group;
 - PingCAP enterprise applications in the customer tenant.

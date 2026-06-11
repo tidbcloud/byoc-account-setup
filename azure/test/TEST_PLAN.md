@@ -415,6 +415,7 @@ DNS_ZONE_CONTRIBUTOR_ROLE="DNS Zone Contributor"
 STORAGE_BLOB_DATA_CONTRIBUTOR_ROLE="Storage Blob Data Contributor"
 STORAGE_ACCOUNT_KEY_OPERATOR_ROLE="Storage Account Key Operator Service Role"
 READER_ROLE="Reader"
+ACR_PUSH_ROLE="AcrPush"
 DATAPLANE_ROLE="TiDB BYOC Dataplane Operator - ${DEPLOY_NAME}"
 DATAPLANE_DNS_ROLE="TiDB BYOC Dataplane DNS Record Operator - ${DEPLOY_NAME}"
 O11Y_AGIC_ROLE="TiDB BYOC O11Y AGIC Operator - ${DEPLOY_NAME}"
@@ -426,8 +427,12 @@ az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "/subscrip
   | tee /tmp/tidbcloud-byoc-initial-contributor-assignment.json | jq .
 az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$ACR_RESOURCE_ID" -o table
 az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$ACR_RESOURCE_ID" -o json \
-  | jq --arg role "$INITIAL_DEPLOY_ROLE" --arg scope "$ACR_RESOURCE_ID" '[.[] | select(.roleDefinitionName == $role and (.scope | ascii_downcase) == ($scope | ascii_downcase))][0]' \
-  | tee /tmp/tidbcloud-byoc-acr-contributor-assignment.json | jq .
+  | jq --arg role "$ACR_PUSH_ROLE" --arg scope "$ACR_RESOURCE_ID" '[.[] | select(.roleDefinitionName == $role and (.scope | ascii_downcase) == ($scope | ascii_downcase))][0]' \
+  | tee /tmp/tidbcloud-byoc-acr-push-assignment.json | jq .
+az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$ACR_RESOURCE_ID" -o json \
+  | jq --arg role "$READER_ROLE" --arg scope "$ACR_RESOURCE_ID" '[.[] | select(.roleDefinitionName == $role and (.scope | ascii_downcase) == ($scope | ascii_downcase))][0]' \
+  | tee /tmp/tidbcloud-byoc-acr-reader-assignment.json | jq .
+ACR_CONTRIBUTOR_ASSIGNMENT_COUNT=$(az role assignment list --assignee "$DEPLOYMENT_SP_OBJECT_ID" --scope "$ACR_RESOURCE_ID" --role "$INITIAL_DEPLOY_ROLE" --query "length(@)" -o tsv)
 az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" -o table
 az role assignment list --assignee "$DATAPLANE_SP_OBJECT_ID" --scope "/subscriptions/${SUBSCRIPTION_ID}" -o json \
   | jq --arg role "$DATAPLANE_ROLE" '[.[] | select(.roleDefinitionName == $role)][0]' \
@@ -496,10 +501,17 @@ jq -e --arg role "$INITIAL_DEPLOY_ROLE" --arg scope "/subscriptions/${SUBSCRIPTI
   and .scope == $scope
 ' /tmp/tidbcloud-byoc-initial-contributor-assignment.json >/dev/null
 
-jq -e --arg role "$INITIAL_DEPLOY_ROLE" --arg scope "$ACR_RESOURCE_ID" '
+jq -e --arg role "$ACR_PUSH_ROLE" --arg scope "$ACR_RESOURCE_ID" '
   .roleDefinitionName == $role
   and (.scope | ascii_downcase) == ($scope | ascii_downcase)
-' /tmp/tidbcloud-byoc-acr-contributor-assignment.json >/dev/null
+' /tmp/tidbcloud-byoc-acr-push-assignment.json >/dev/null
+
+jq -e --arg role "$READER_ROLE" --arg scope "$ACR_RESOURCE_ID" '
+  .roleDefinitionName == $role
+  and (.scope | ascii_downcase) == ($scope | ascii_downcase)
+' /tmp/tidbcloud-byoc-acr-reader-assignment.json >/dev/null
+
+[[ "$ACR_CONTRIBUTOR_ASSIGNMENT_COUNT" == "0" ]]
 
 jq -e --arg role "$STORAGE_BLOB_DATA_CONTRIBUTOR_ROLE" --arg scope "$O11Y_STORAGE_SCOPE" '
   .roleDefinitionName == $role
@@ -528,7 +540,7 @@ jq -e '
   has_action("Microsoft.Storage/storageAccounts/read")
   and has_action("Microsoft.Storage/storageAccounts/write")
   and has_action("Microsoft.Storage/storageAccounts/delete")
-  and has_action("Microsoft.Storage/storageAccounts/listKeys/action")
+  and lacks_action("Microsoft.Storage/storageAccounts/listKeys/action")
   and has_action("Microsoft.Storage/storageAccounts/blobServices/read")
   and has_action("Microsoft.Storage/storageAccounts/fileServices/read")
   and has_action("Microsoft.Storage/storageAccounts/blobServices/containers/read")
@@ -618,7 +630,7 @@ jq -e --arg scope "/subscriptions/${SUBSCRIPTION_ID}" '
 Pass criteria:
 
 - Deployment app has temporary `Contributor` at BYOC subscription scope.
-- Deployment app has persistent `Contributor` at ACR scope.
+- Deployment app has persistent `AcrPush` and `Reader` at ACR scope.
 - Dataplane app has dataplane custom role at BYOC subscription scope.
 - Dataplane app has DNS record custom role at the public DNS zone scope, in the public DNS zone subscription.
 - Deployment app has temporary `DNS Zone Contributor` at the O11Y public DNS zone scope.

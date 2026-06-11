@@ -8,7 +8,8 @@ param acrResourceGroupName string = 'rg-tidbcloud-${deployName}-acr'
 param acrName string
 param createAcr bool = true
 
-var contributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+var acrPushRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8311e382-0749-4cb8-b61a-304f252e45ec')
+var readerRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
 var acrId = resourceId(subscription().subscriptionId, acrResourceGroupName, 'Microsoft.ContainerRegistry/registries', acrName)
 
 resource deploymentResourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
@@ -33,28 +34,53 @@ module deployResources './modules/deploy-resources.bicep' = if (createAcr) {
   ]
 }
 
-module deploymentCreatedAcrContributorAssignment './modules/acr-role-assignment.bicep' = if (createAcr) {
-  name: 'deployment-created-acr-contributor-assignment'
+module deploymentCreatedAcrPushAssignment './modules/acr-role-assignment.bicep' = if (createAcr) {
+  name: 'deployment-created-acr-push-assignment'
   scope: resourceGroup(acrResourceGroupName)
   params: {
     acrName: acrName
     principalId: deploymentPrincipalObjectId
-    roleDefinitionId: contributorRoleDefinitionId
-    assignmentGuidSeed: '${deploymentPrincipalObjectId}-acr-contributor'
+    roleDefinitionId: acrPushRoleDefinitionId
+    assignmentGuidSeed: '${deploymentPrincipalObjectId}-acr-push'
   }
   dependsOn: [
     deployResources
   ]
 }
 
-module deploymentExistingAcrContributorAssignment './modules/acr-role-assignment.bicep' = if (!createAcr) {
-  name: 'deployment-existing-acr-contributor-assignment'
+module deploymentCreatedAcrReaderAssignment './modules/acr-role-assignment.bicep' = if (createAcr) {
+  name: 'deployment-created-acr-reader-assignment'
   scope: resourceGroup(acrResourceGroupName)
   params: {
     acrName: acrName
     principalId: deploymentPrincipalObjectId
-    roleDefinitionId: contributorRoleDefinitionId
-    assignmentGuidSeed: '${deploymentPrincipalObjectId}-acr-contributor'
+    roleDefinitionId: readerRoleDefinitionId
+    assignmentGuidSeed: '${deploymentPrincipalObjectId}-acr-reader'
+  }
+  dependsOn: [
+    deployResources
+  ]
+}
+
+module deploymentExistingAcrPushAssignment './modules/acr-role-assignment.bicep' = if (!createAcr) {
+  name: 'deployment-existing-acr-push-assignment'
+  scope: resourceGroup(acrResourceGroupName)
+  params: {
+    acrName: acrName
+    principalId: deploymentPrincipalObjectId
+    roleDefinitionId: acrPushRoleDefinitionId
+    assignmentGuidSeed: '${deploymentPrincipalObjectId}-acr-push'
+  }
+}
+
+module deploymentExistingAcrReaderAssignment './modules/acr-role-assignment.bicep' = if (!createAcr) {
+  name: 'deployment-existing-acr-reader-assignment'
+  scope: resourceGroup(acrResourceGroupName)
+  params: {
+    acrName: acrName
+    principalId: deploymentPrincipalObjectId
+    roleDefinitionId: readerRoleDefinitionId
+    assignmentGuidSeed: '${deploymentPrincipalObjectId}-acr-reader'
   }
 }
 

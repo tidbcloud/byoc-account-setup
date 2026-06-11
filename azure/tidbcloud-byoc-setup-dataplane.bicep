@@ -74,7 +74,6 @@ resource dataplaneRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
           'Microsoft.Storage/storageAccounts/read'
           'Microsoft.Storage/storageAccounts/write'
           'Microsoft.Storage/storageAccounts/delete'
-          'Microsoft.Storage/storageAccounts/listKeys/action'
           'Microsoft.Storage/storageAccounts/blobServices/read'
           'Microsoft.Storage/storageAccounts/fileServices/read'
           'Microsoft.Storage/storageAccounts/blobServices/containers/read'

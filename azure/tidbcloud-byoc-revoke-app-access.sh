@@ -11,7 +11,7 @@ but keep the Azure resources for review or manual cleanup.
 
 Revoked:
   - Deployment application temporary initial deployment access
-  - Deployment application role assignments, including ACR-scoped Contributor
+  - Deployment application role assignments, including ACR-scoped AcrPush and Reader
   - Dataplane management application role assignments
   - Dataplane management application membership in the AKS admin group
   - PingCAP enterprise applications/service principals, unless --keep-enterprise-apps is set
