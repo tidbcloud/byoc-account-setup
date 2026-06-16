@@ -115,6 +115,83 @@ A TiDB cluster endpoint will look similar to `xxxx.tidb.example.com`.
 
 The setup scripts create the Azure resources and access bindings required for TiDB Cloud BYOC.
 
+### Script inputs
+
+Prepare the following values before running the scripts:
+
+| Input | Description |
+|---|---|
+| `deployName` | TiDB Cloud BYOC deploy name provided by PingCAP. The setup uses it to name deployment-specific Azure resources. |
+| `tenantId` | Your Microsoft Entra tenant ID |
+| `subscriptionId` | Subscription ID for TiDB Cloud BYOC workloads |
+| `subscriptionIdOfDNSZone` | Subscription ID that contains the public DNS zone |
+| `resourceGroupOfDNSZone` | Resource group that contains the public DNS zone |
+| `rootDomainOfDNSZone` | Root domain of the public DNS zone |
+| `resourceGroupOfO11YDNSZone` | Resource group that contains the O11Y public DNS zone |
+| `rootDomainOfO11YDNSZone` | Root domain of the O11Y public DNS zone |
+| Deployment application ID | Multi-tenant application ID provided by PingCAP |
+| Dataplane management application ID | Multi-tenant application ID provided by PingCAP |
+
+If optional resource names are not provided, the setup script uses deterministic names based on `deployName`. By default, the ACR is created in a separate resource group, `rg-tidbcloud-<deployName>-acr`. To reuse an existing ACR, pass `--reuse-acr` with `--acr-resource-group` and `--acr-name`; the setup records the ACR in onboarding state and grants required access, but does not create or manage the ACR resource group or registry in the deploy stack. For the audit log storage account, the script uses `st<last-12-alphanumeric-characters-of-deployName>auditlog` to stay within Azure's 24-character storage account name limit.
+
+### Run the scripts
+
+Run the setup script once to create or reconcile the Azure resources, enterprise applications, groups, and role assignments:
+
+```bash
+bash tidbcloud-byoc-setup.sh \
+  --deploy-name <deployName> \
+  --location <azureRegion> \
+  --tenant-id <tenantId> \
+  --subscription-id <subscriptionId> \
+  --dns-zone-subscription-id <subscriptionIdOfDNSZone> \
+  --dns-zone-resource-group <resourceGroupOfDNSZone> \
+  --dns-zone-root-domain <rootDomainOfDNSZone> \
+  --o11y-dns-zone-resource-group <resourceGroupOfO11YDNSZone> \
+  --o11y-dns-zone-root-domain <rootDomainOfO11YDNSZone> \
+  --deployment-app-id <deploymentApplicationId> \
+  --dataplane-app-id <dataplaneManagementApplicationId>
+```
+
+To reuse an existing ACR instead of creating one:
+
+```bash
+bash tidbcloud-byoc-setup.sh \
+  --deploy-name <deployName> \
+  --location <azureRegion> \
+  --tenant-id <tenantId> \
+  --subscription-id <subscriptionId> \
+  --dns-zone-subscription-id <subscriptionIdOfDNSZone> \
+  --dns-zone-resource-group <resourceGroupOfDNSZone> \
+  --dns-zone-root-domain <rootDomainOfDNSZone> \
+  --o11y-dns-zone-resource-group <resourceGroupOfO11YDNSZone> \
+  --o11y-dns-zone-root-domain <rootDomainOfO11YDNSZone> \
+  --deployment-app-id <deploymentApplicationId> \
+  --dataplane-app-id <dataplaneManagementApplicationId> \
+  --acr-resource-group <existingAcrResourceGroup> \
+  --acr-name <existingAcrName> \
+  --reuse-acr
+```
+
+The script is idempotent for the initial onboarding flow. Running it again reconciles the full setup, including temporary initial deployment access. If you already revoked that temporary access after the first deployment, re-running setup will recreate it. Revoke it again after the deployment or recovery operation completes.
+
+### Script output
+
+After the scripts finish, the canonical handoff is stored in the onboarding state deployment stack inside the customer subscription. While temporary initial deployment access is still present, the deployment application can retrieve the `customerOnboarding` output directly.
+
+## Step 3: Provide setup handoff to PingCAP
+
+After the scripts finish, provide these values to PingCAP:
+
+- `deployName`;
+- `tenantId`;
+- `subscriptionId`;
+- onboarding state stack name, `cust-<deployName>-tidbcloud-byoc-setup-state`.
+
+TiDB Cloud uses the deployment application to read the onboarding state stack and retrieve the `customerOnboarding` output before temporary initial deployment access is revoked.
+
+## Reference
+
 ### Resources created by the scripts
 
 The public DNS zones themselves are customer-provided. Custom roles and role assignments are covered in [Privileges granted during setup](#privileges-granted-during-setup). The scripts create or reconcile these resources:
@@ -128,7 +205,7 @@ The public DNS zones themselves are customer-provided. Custom roles and role ass
 | Deployment orchestration | Deployment stack `cust-<deployName>-tidbcloud-byoc-setup-state` | Stores durable setup state and auto-deploy handoff outputs |
 | Microsoft Entra ID | Enterprise application for the deployment application ID | Allows the TiDB Cloud deployment application to authenticate into the tenant |
 | Microsoft Entra ID | Enterprise application for the dataplane management application ID | Allows the TiDB Cloud dataplane management application to authenticate into the tenant |
-| Microsoft Entra ID | Group `tidbcloud-<deployName>-aks-admins` | Grants dataplane management AKS administrator access |
+| Microsoft Entra ID | Group `tidbcloud-<deployName>-aks-admins` | Allows AKS to authorize the dataplane management application as a cluster administrator through Microsoft Entra group membership |
 | Microsoft Entra ID | Dataplane management application membership in `tidbcloud-<deployName>-aks-admins` | Allows the dataplane management application to administer BYOC AKS clusters |
 | Resource groups | Deployment resource group `rg-tidbcloud-<deployName>-deploy` | Holds deployment-related customer resources reserved for setup and operations |
 | Resource groups | ACR resource group `rg-tidbcloud-<deployName>-acr`, or the provided existing ACR resource group | Holds the customer Azure Container Registry |
@@ -260,81 +337,6 @@ The setup grants these RBAC roles:
 | `o11y-vmbackup` | O11Y storage resource group: `Storage Blob Data Contributor` | Read and write VM backup blob data |
 | `o11y-loki` | O11Y storage resource group: `Storage Blob Data Contributor` | Read and write Loki blob data |
 | `o11y-velero` | O11Y storage resource group: `Storage Blob Data Contributor`, `Storage Account Key Operator Service Role`, `Reader` | Read and write Velero backup blob data, read storage resource metadata, and access storage account keys |
-
-### Script inputs
-
-Prepare the following values before running the scripts:
-
-| Input | Description |
-|---|---|
-| `deployName` | TiDB Cloud BYOC deploy name provided by PingCAP. The setup uses it to name deployment-specific Azure resources. |
-| `tenantId` | Your Microsoft Entra tenant ID |
-| `subscriptionId` | Subscription ID for TiDB Cloud BYOC workloads |
-| `subscriptionIdOfDNSZone` | Subscription ID that contains the public DNS zone |
-| `resourceGroupOfDNSZone` | Resource group that contains the public DNS zone |
-| `rootDomainOfDNSZone` | Root domain of the public DNS zone |
-| `resourceGroupOfO11YDNSZone` | Resource group that contains the O11Y public DNS zone |
-| `rootDomainOfO11YDNSZone` | Root domain of the O11Y public DNS zone |
-| Deployment application ID | Multi-tenant application ID provided by PingCAP |
-| Dataplane management application ID | Multi-tenant application ID provided by PingCAP |
-
-If optional resource names are not provided, the setup script uses deterministic names based on `deployName`. By default, the ACR is created in a separate resource group, `rg-tidbcloud-<deployName>-acr`. To reuse an existing ACR, pass `--reuse-acr` with `--acr-resource-group` and `--acr-name`; the setup records the ACR in onboarding state and grants required access, but does not create or manage the ACR resource group or registry in the deploy stack. For the audit log storage account, the script uses `st<last-12-alphanumeric-characters-of-deployName>auditlog` to stay within Azure's 24-character storage account name limit.
-
-### Run the scripts
-
-Run the setup script once to create or reconcile the Azure resources, enterprise applications, groups, and role assignments:
-
-```bash
-bash tidbcloud-byoc-setup.sh \
-  --deploy-name <deployName> \
-  --location <azureRegion> \
-  --tenant-id <tenantId> \
-  --subscription-id <subscriptionId> \
-  --dns-zone-subscription-id <subscriptionIdOfDNSZone> \
-  --dns-zone-resource-group <resourceGroupOfDNSZone> \
-  --dns-zone-root-domain <rootDomainOfDNSZone> \
-  --o11y-dns-zone-resource-group <resourceGroupOfO11YDNSZone> \
-  --o11y-dns-zone-root-domain <rootDomainOfO11YDNSZone> \
-  --deployment-app-id <deploymentApplicationId> \
-  --dataplane-app-id <dataplaneManagementApplicationId>
-```
-
-To reuse an existing ACR instead of creating one:
-
-```bash
-bash tidbcloud-byoc-setup.sh \
-  --deploy-name <deployName> \
-  --location <azureRegion> \
-  --tenant-id <tenantId> \
-  --subscription-id <subscriptionId> \
-  --dns-zone-subscription-id <subscriptionIdOfDNSZone> \
-  --dns-zone-resource-group <resourceGroupOfDNSZone> \
-  --dns-zone-root-domain <rootDomainOfDNSZone> \
-  --o11y-dns-zone-resource-group <resourceGroupOfO11YDNSZone> \
-  --o11y-dns-zone-root-domain <rootDomainOfO11YDNSZone> \
-  --deployment-app-id <deploymentApplicationId> \
-  --dataplane-app-id <dataplaneManagementApplicationId> \
-  --acr-resource-group <existingAcrResourceGroup> \
-  --acr-name <existingAcrName> \
-  --reuse-acr
-```
-
-The script is idempotent for the initial onboarding flow. Running it again reconciles the full setup, including temporary initial deployment access. If you already revoked that temporary access after the first deployment, re-running setup will recreate it. Revoke it again after the deployment or recovery operation completes.
-
-### Script output
-
-After the scripts finish, the canonical handoff is stored in the onboarding state deployment stack inside the customer subscription. While temporary initial deployment access is still present, the deployment application can retrieve the `customerOnboarding` output directly.
-
-## Step 3: Provide setup handoff to PingCAP
-
-After the scripts finish, provide these values to PingCAP:
-
-- `deployName`;
-- `tenantId`;
-- `subscriptionId`;
-- onboarding state stack name, `cust-<deployName>-tidbcloud-byoc-setup-state`.
-
-TiDB Cloud uses the deployment application to read the onboarding state stack and retrieve the `customerOnboarding` output before temporary initial deployment access is revoked.
 
 ## FAQ
 
