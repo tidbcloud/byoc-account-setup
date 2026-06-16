@@ -543,6 +543,8 @@ jq -e '
   and lacks_action("Microsoft.Storage/storageAccounts/listKeys/action")
   and has_action("Microsoft.Storage/storageAccounts/blobServices/read")
   and has_action("Microsoft.Storage/storageAccounts/fileServices/read")
+  and has_action("Microsoft.Storage/storageAccounts/queueServices/read")
+  and has_action("Microsoft.Storage/storageAccounts/queueServices/queues/read")
   and has_action("Microsoft.Storage/storageAccounts/blobServices/containers/read")
   and has_action("Microsoft.Storage/storageAccounts/blobServices/containers/write")
   and has_action("Microsoft.Storage/storageAccounts/blobServices/containers/delete")
