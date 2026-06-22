@@ -568,6 +568,45 @@ Resources:
                 Condition:
                   StringEquals:
                     "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Sid: EC2RunInstancesWithVpcSecurityGroups
+                Effect: Allow
+                Action:
+                  - ec2:RunInstances
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:security-group/*
+                Condition:
+                  ArnLike:
+                    "ec2:Vpc": !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:vpc/*
+                    "ec2:LaunchTemplate": !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:launch-template/*
+                  Bool:
+                    "ec2:IsLaunchTemplateResource": "false"
+              - Sid: EC2RunInstancesWithAmazonMachineImages
+                Effect: Allow
+                Action:
+                  - ec2:RunInstances
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ec2:*::image/*
+                Condition:
+                  ArnLike:
+                    "ec2:LaunchTemplate": !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:launch-template/*
+                  StringEquals:
+                    "ec2:Owner": amazon
+                    "ec2:ImageType": machine
+                    "ec2:RootDeviceType": ebs
+                  Bool:
+                    "ec2:Public": "true"
+                    "ec2:IsLaunchTemplateResource": "false"
+              - Sid: EC2ModifyVpcEndpointWithEksClusterSecurityGroups
+                Effect: Allow
+                Action:
+                  - ec2:ModifyVpcEndpoint
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:security-group/*
+                Condition:
+                  ArnLike:
+                    "ec2:Vpc": !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:vpc/*
+                  StringLike:
+                    "aws:ResourceTag/aws:eks:cluster-name": tidbcloud-*
               - Sid: EC2ModifyOperationsOnTaggedResources
                 Effect: Allow
                 Action:
