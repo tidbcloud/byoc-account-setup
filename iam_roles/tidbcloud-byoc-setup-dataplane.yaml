@@ -508,6 +508,7 @@ Resources:
                   - ec2:DescribeAddressesAttribute
                   - ec2:DescribePrefixLists
                   - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribePlacementGroups
                 Resource: "*"
               - Sid: EC2CreateOperationsWithRequiredTag
                 Effect: Allow
@@ -520,6 +521,7 @@ Resources:
                   - ec2:CreateRouteTable
                   - ec2:CreateSecurityGroup
                   - ec2:CreateLaunchTemplate
+                  - ec2:CreatePlacementGroup
                   - ec2:RunInstances
                   - ec2:CreateVpcPeeringConnection
                   - ec2:CreateVpcEndpoint
@@ -528,6 +530,44 @@ Resources:
                 Condition:
                   StringEquals:
                     "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Sid: EC2CreateOperationsInTaggedVpcs
+                Effect: Allow
+                Action:
+                  - ec2:CreateNatGateway
+                  - ec2:CreateSubnet
+                  - ec2:CreateRouteTable
+                  - ec2:CreateSecurityGroup
+                  - ec2:CreateVpcPeeringConnection
+                  - ec2:CreateVpcEndpoint
+                Resource: !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:vpc/*
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Sid: EC2CreateOperationsInTaggedSubnets
+                Effect: Allow
+                Action:
+                  - ec2:CreateNatGateway
+                  - ec2:CreateVpcEndpoint
+                  - ec2:RunInstances
+                Resource: !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:subnet/*
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Sid: EC2CreateOperationsWithTaggedDependencies
+                Effect: Allow
+                Action:
+                  - ec2:CreateNatGateway
+                  - ec2:CreateVpcEndpoint
+                  - ec2:RunInstances
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:elastic-ip/*
+                  - !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:route-table/*
+                  - !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:security-group/*
+                  - !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:launch-template/*
+                  - !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:placement-group/*
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
               - Sid: EC2ModifyOperationsOnTaggedResources
                 Effect: Allow
                 Action:
@@ -552,6 +592,7 @@ Resources:
                   - ec2:DeleteSecurityGroup
                   - ec2:CreateLaunchTemplateVersion
                   - ec2:DeleteLaunchTemplate
+                  - ec2:DeletePlacementGroup
                   - ec2:RebootInstances
                   - ec2:StopInstances
                   - ec2:TerminateInstances
@@ -583,6 +624,7 @@ Resources:
                       - CreateRouteTable
                       - CreateSecurityGroup
                       - CreateLaunchTemplate
+                      - CreatePlacementGroup
                       - RunInstances
                       - CreateVpcPeeringConnection
                       - CreateVpcEndpoint
