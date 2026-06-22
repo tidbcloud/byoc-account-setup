@@ -35,6 +35,18 @@ Parameters:
     Type: CommaDelimitedList
     Default: ""
     Description: "Additional hosted zone IDs for multi-region deployments (comma-separated IDs, e.g. Z111AAA,Z222BBB)"
+  ResourceNamePrefix:
+    Type: String
+    Default: "tidbcloud"
+    Description: "Prefix for TiDB Cloud managed AWS resource names"
+  RequiredManagedByTagValue:
+    Type: String
+    Default: "PingCAP"
+    Description: "Required value for the ManagedBy tag on TiDB Cloud managed AWS resources"
+  SLIBucketNamePrefix:
+    Type: String
+    Default: "tidbcloud-sli-data"
+    Description: "Prefix for SLI data buckets readable by Clinic"
 Conditions:
   EnableExternalDNSNodeRolePolicyCondition: !Equals [!Ref EnableExternalDNSNodeRolePolicy, "true"]
   HasAdditionalPCAs: !Not [!Equals [!Join [",", !Ref AdditionalPCAArns], ""]]
@@ -425,22 +437,39 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Sid: EKSPassServiceAndNodeRole
+              - Sid: EKSReadServiceAndNodeRole
                 Effect: Allow
                 Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-eks-node-role
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-eks-service-role
+              - Sid: EKSPassServiceAndNodeRole
+                Effect: Allow
+                Action:
                   - iam:PassRole
                 Resource:
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-eks-node-role
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-eks-service-role
-              - Sid: EKSCreateServiceLinkedRole
+                Condition:
+                  StringEquals:
+                    "iam:PassedToService": eks.amazonaws.com
+              - Sid: EKSReadServiceLinkedRole
                 Effect: Allow
                 Action:
                   - iam:GetRole
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup
+              - Sid: EKSCreateServiceLinkedRole
+                Effect: Allow
+                Action:
                   - iam:CreateServiceLinkedRole
                 Resource:
-                  - arn:aws:iam::*:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup
+                Condition:
+                  StringEquals:
+                    "iam:AWSServiceName": eks-nodegroup.amazonaws.com
               - Sid: S3OperationsWithPrefix
                 Effect: Allow
                 Action:
@@ -457,7 +486,7 @@ Resources:
                   - s3:PutBucketPolicy
                   - s3:DeleteBucketPolicy
                   - s3:PutBucketOwnershipControls
-                Resource: arn:aws:s3:::tidbcloud*
+                Resource: !Sub arn:aws:s3:::${ResourceNamePrefix}*
               - Sid: EC2ReadOnlyOperations
                 Effect: Allow
                 Action:
@@ -480,68 +509,117 @@ Resources:
                   - ec2:DescribePrefixLists
                   - ec2:DescribeNetworkInterfaces
                 Resource: "*"
-              - Sid: EC2WriteOperations
+              - Sid: EC2CreateOperationsWithRequiredTag
                 Effect: Allow
                 Action:
                   - ec2:CreateVpc
+                  - ec2:AllocateAddress
+                  - ec2:CreateNatGateway
+                  - ec2:CreateInternetGateway
+                  - ec2:CreateSubnet
+                  - ec2:CreateRouteTable
+                  - ec2:CreateSecurityGroup
+                  - ec2:CreateLaunchTemplate
+                  - ec2:RunInstances
+                  - ec2:CreateVpcPeeringConnection
+                  - ec2:CreateVpcEndpoint
+                  - ec2:CreateVpcEndpointServiceConfiguration
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Sid: EC2ModifyOperationsOnTaggedResources
+                Effect: Allow
+                Action:
                   - ec2:ModifyVpc*
                   - ec2:DeleteVpc
-                  - ec2:AllocateAddress
                   - ec2:ReleaseAddress
-                  - ec2:CreateNatGateway
                   - ec2:DeleteNatGateway
                   - ec2:AssociateNatGatewayAddress
-                  - ec2:CreateInternetGateway
                   - ec2:AttachInternetGateway
                   - ec2:DetachInternetGateway
                   - ec2:DeleteInternetGateway
-                  - ec2:CreateSubnet
                   - ec2:DeleteSubnet
-                  - ec2:CreateRouteTable
                   - ec2:DeleteRouteTable
                   - ec2:CreateRoute
+                  - ec2:DeleteRoute
                   - ec2:AssociateRouteTable
                   - ec2:DisassociateRouteTable
-                  - ec2:CreateSecurityGroup
                   - ec2:AuthorizeSecurityGroupIngress
                   - ec2:AuthorizeSecurityGroupEgress
                   - ec2:RevokeSecurityGroupIngress
                   - ec2:RevokeSecurityGroupEgress
                   - ec2:DeleteSecurityGroup
-                  - ec2:CreateLaunchTemplate
                   - ec2:CreateLaunchTemplateVersion
                   - ec2:DeleteLaunchTemplate
-                  - ec2:RunInstances
                   - ec2:RebootInstances
                   - ec2:StopInstances
                   - ec2:TerminateInstances
-                  - ec2:CreateTags
-                  - ec2:DeleteTags
-                Resource: "*"
-              - Sid: VPCPeeringOperations
-                Effect: Allow
-                Action:
-                  - ec2:CreateVpcPeeringConnection
                   - ec2:DeleteVpcPeeringConnection
-                  - ec2:DescribeVpcPeeringConnections
                   - ec2:AcceptVpcPeeringConnection
-                  - ec2:DeleteRoute
-                Resource: "*"
-              - Sid: PrivateLinkOperations
-                Effect: Allow
-                Action:
-                  - elasticloadbalancing:DescribeLoadBalancers
-                  - ec2:DescribeVpcEndpointConnections
-                  - ec2:DescribeVpcEndpointServices
-                  - ec2:DescribeVpcEndpointServicePermissions
-                  - ec2:DescribeVpcEndpointServiceConfigurations
-                  - ec2:CreateVpcEndpointServiceConfiguration
                   - ec2:DeleteVpcEndpointServiceConfigurations
-                  - ec2:CreateVpcEndpoint
                   - ec2:DeleteVpcEndpoints
                   - ec2:AcceptVpcEndpointConnections
                   - ec2:RejectVpcEndpointConnections
                   - ec2:StartVpcEndpointServicePrivateDnsVerification
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Sid: EC2CreateTagsOnCreateWithRequiredTag
+                Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+                    "ec2:CreateAction":
+                      - CreateVpc
+                      - AllocateAddress
+                      - CreateNatGateway
+                      - CreateInternetGateway
+                      - CreateSubnet
+                      - CreateRouteTable
+                      - CreateSecurityGroup
+                      - CreateLaunchTemplate
+                      - RunInstances
+                      - CreateVpcPeeringConnection
+                      - CreateVpcEndpoint
+                      - CreateVpcEndpointServiceConfiguration
+              - Sid: EC2CreateTagsOnTaggedResources
+                Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+                  StringEqualsIfExists:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Sid: EC2DeleteTagsFromTaggedResources
+                Effect: Allow
+                Action:
+                  - ec2:DeleteTags
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+                  ForAllValues:StringNotEquals:
+                    "aws:TagKeys": ManagedBy
+              - Sid: VPCPeeringReadOnlyOperations
+                Effect: Allow
+                Action:
+                  - ec2:DescribeVpcPeeringConnections
+                Resource: "*"
+              - Sid: PrivateLinkReadOnlyOperations
+                Effect: Allow
+                Action:
+                  - ec2:DescribeVpcEndpointConnections
+                  - ec2:DescribeVpcEndpointServices
+                  - ec2:DescribeVpcEndpointServicePermissions
+                  - ec2:DescribeVpcEndpointServiceConfigurations
+                  - elasticloadbalancing:DescribeLoadBalancers
                 Resource: "*"
               - Sid: EKSReadOnlyOperations
                 Effect: Allow
@@ -579,10 +657,10 @@ Resources:
                   - eks:DisassociateAccessPolicy
                   - eks:UntagResource
                 Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/tidbcloud*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/tidbcloud*/*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/tidbcloud*/*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:access-entry/tidbcloud*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/${ResourceNamePrefix}*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/${ResourceNamePrefix}*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/${ResourceNamePrefix}*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:access-entry/${ResourceNamePrefix}*/*
               - Sid: Route53ResourceRecordSetOperations
                 Effect: Allow
                 Action:
@@ -614,19 +692,40 @@ Resources:
                 Action:
                   - route53:GetChange
                 Resource: arn:aws:route53:::change/*
-              - Sid: Route53ForChangefeedPrivateLinkPrivateDNS
+              # Private hosted zones are created dynamically by Dataplane Manager.
+              # Route53 does not support tag-based conditions, so create remains
+              # the isolated wildcard exception for private DNS.
+              - Sid: Route53CreatePrivateHostedZone
                 Effect: Allow
                 Action:
                   - route53:CreateHostedZone
+                Resource: "*"
+              - Sid: Route53PrivateHostedZoneOperations
+                Effect: Allow
+                Action:
                   - route53:GetHostedZone
                   - route53:DeleteHostedZone
                   - route53:AssociateVPCWithHostedZone
                   - route53:DisassociateVPCFromHostedZone
-                  - route53:ChangeResourceRecordSets
                   - route53:ListResourceRecordSets
                   - route53:ListTagsForResource
                   - route53:ChangeTagsForResource
-                Resource: "*"
+                Resource:
+                  - arn:aws:route53:::hostedzone/*
+              - Sid: Route53PrivateDNSRecordSetOperations
+                Effect: Allow
+                Action:
+                  - route53:ChangeResourceRecordSets
+                Resource:
+                  - arn:aws:route53:::hostedzone/*
+                Condition:
+                  ForAllValues:StringEquals:
+                    "route53:ChangeResourceRecordSetsActions":
+                      - CREATE
+                      - UPSERT
+                      - DELETE
+                    "route53:ChangeResourceRecordSetsRecordTypes":
+                      - CNAME
   TiDBCloudSliRole:
     Type: AWS::IAM::Role
     Properties:
@@ -647,15 +746,19 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Sid: S3ReadOnlyAccess
+              - Sid: S3BucketReadOnlyAccess
                 Effect: Allow
                 Action:
                   - s3:ListBucket
                   - s3:GetBucket*
+                Resource:
+                  - !Sub arn:aws:s3:::${SLIBucketNamePrefix}*
+              - Sid: S3ObjectReadOnlyAccess
+                Effect: Allow
+                Action:
                   - s3:GetObject
                 Resource:
-                  - arn:aws:s3:::tidbcloud-sli-data*
-                  - arn:aws:s3:::tidbcloud-sli-data*/*
+                  - !Sub arn:aws:s3:::${SLIBucketNamePrefix}*/*
   TiDBCloudSliFirehoseRole:
     Type: AWS::IAM::Role
     Properties:

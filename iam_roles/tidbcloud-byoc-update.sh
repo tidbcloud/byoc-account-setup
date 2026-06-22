@@ -120,8 +120,8 @@ if [[ -n "$AdditionalO11yHostedZoneIds" ]]; then
   deploy_overrides="AdditionalO11yHostedZoneIds=$(hz_ids_to_arns "$AdditionalO11yHostedZoneIds")"
 fi
 
-dataplane_overrides=""
-[[ -n "$AdditionalPCAArns" ]] && dataplane_overrides="AdditionalPCAArns=$AdditionalPCAArns"
+dataplane_overrides="ResourceNamePrefix=tidbcloud RequiredManagedByTagValue=PingCAP SLIBucketNamePrefix=tidbcloud-sli-data"
+[[ -n "$AdditionalPCAArns" ]] && dataplane_overrides="$dataplane_overrides AdditionalPCAArns=$AdditionalPCAArns"
 if [[ -n "$AdditionalTidbHostedZoneIds" ]]; then
   dataplane_overrides="$dataplane_overrides AdditionalHostedZoneIds=$(hz_ids_to_arns "$AdditionalTidbHostedZoneIds")"
 fi

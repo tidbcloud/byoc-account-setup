@@ -129,7 +129,7 @@ aws cloudformation deploy \
                $deploy_overrides \
   --capabilities CAPABILITY_NAMED_IAM
 
-dataplane_overrides=""
+dataplane_overrides="ResourceNamePrefix=tidbcloud RequiredManagedByTagValue=PingCAP SLIBucketNamePrefix=tidbcloud-sli-data"
 [[ -n "$AdditionalPCAArns" ]] && dataplane_overrides="$dataplane_overrides AdditionalPCAArns=$AdditionalPCAArns"
 if [[ -n "$AdditionalTidbHostedZoneIds" ]]; then
   dataplane_overrides="$dataplane_overrides AdditionalHostedZoneIds=$(hz_ids_to_arns "$AdditionalTidbHostedZoneIds")"
