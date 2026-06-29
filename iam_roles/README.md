@@ -20,16 +20,6 @@ Before you begin, ensure you have the following:
    * For multi-region deployments, the same PCA can be shared across all regions, or you can create a dedicated PCA per region.
    * AWS document for creating a private CA: https://docs.aws.amazon.com/privateca/latest/userguide/create-CA.html
 
-4. **Dataplane Resource Tags**
-   * The dataplane manager role restricts write access to TiDB Cloud managed resources with the tag `ManagedBy=PingCAP` where AWS supports tag conditions.
-   * Ensure the BYOC Dataplane Manager configuration applies this tag through `additionalCloudTags`:
-
-     ```yaml
-     additionalCloudTags:
-       ManagedBy: PingCAP
-     ```
-   * Existing managed resources must have this tag before updating to the least-privilege dataplane policy.
-
 ## Initialization
 
 
@@ -106,8 +96,6 @@ Before you begin, ensure you have the following:
 If you need to update existing CloudFormation stacks (e.g. after modifying the YAML templates), use `tidbcloud-byoc-update.sh`. It automatically fetches existing parameters from deployed stacks, so you don't need to pass them again for those parameters.
 
 > Note: The script only reuses parameters that already exist in the stack. If the template introduces a new parameter without a default value, you must still provide that value when updating or the update will fail.
-
-The setup and update scripts hard-code the default dataplane least-privilege parameters: `ResourceNamePrefix=tidbcloud`, `RequiredManagedByTagValue=PingCAP`, and `SLIBucketNamePrefix=tidbcloud-sli-data`.
 
 Update a specific stack:
 

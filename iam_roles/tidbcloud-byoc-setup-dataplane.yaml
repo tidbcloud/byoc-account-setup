@@ -760,7 +760,7 @@ Resources:
                 Action:
                   - route53:GetChange
                 Resource: arn:aws:route53:::change/*
-              # Private hosted zones are created dynamically by Dataplane Manager.
+              # Private hosted zones are created dynamically.
               # Route53 does not support tag-based conditions, so create remains
               # the isolated wildcard exception for private DNS.
               - Sid: Route53CreatePrivateHostedZone
