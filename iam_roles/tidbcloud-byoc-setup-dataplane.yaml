@@ -650,6 +650,7 @@ Resources:
                       - CreateSubnet
                       - CreateRouteTable
                       - CreateSecurityGroup
+                      - CreatePlacementGroup
                       - CreateLaunchTemplate
                       - RunInstances
                       - CreateVpcPeeringConnection
