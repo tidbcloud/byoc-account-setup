@@ -503,3 +503,18 @@ Resources:
                   - route53-recovery-readiness:ListReadinessChecks
                 Effect: Allow
                 Resource: "*"
+              - Action:
+                  - kms:CreateKey
+                  - kms:CreateAlias
+                  - kms:TagResource
+                  - kms:UntagResource
+                Effect: Allow
+                Resource: "*"
+                Sid: "KMSWrite"
+              - Action:
+                  - kms:DescribeKey
+                  - kms:ListKeys
+                  - kms:ListResourceTags
+                Effect: Allow
+                Resource: "*"
+                Sid: "KMSReadOnly"
