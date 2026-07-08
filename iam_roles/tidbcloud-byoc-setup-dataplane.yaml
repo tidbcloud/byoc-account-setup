@@ -499,6 +499,7 @@ Resources:
                   - ec2:DescribeNatGateways
                   - ec2:DescribeInternetGateways
                   - ec2:DescribeSecurityGroup*
+                  - ec2:DescribePlacementGroups
                   - ec2:DescribeLaunchTemplates
                   - ec2:DescribeLaunchTemplateVersions
                   - ec2:DescribeInstances
@@ -650,7 +651,8 @@ Resources:
                       - CreateRouteTable
                       - CreateSecurityGroup
                       - CreateLaunchTemplate
-                      - CreatePlacementGroup
+                      - 
+                      
                       - RunInstances
                       - CreateVpcPeeringConnection
                       - CreateVpcEndpoint

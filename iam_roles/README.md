@@ -8,7 +8,11 @@ Before you begin, ensure you have the following:
 
 1. **AWS CLI Configured**
    * Your AWS CLI must be configured with appropriate credentials and permissions for your AWS account.
-   * Necessary permissions include actions for IAM and CloudFormation.
+   * The AWS principal that runs this script must be allowed to deploy CloudFormation stacks that create named IAM resources.
+   * For quick setup, you can attach the following AWS managed policies to the principal running the script:
+     * `AWSCloudFormationFullAccess`
+     * `IAMFullAccess`
+   * For stricter environments, see [Least-privilege permissions](#least-privilege-permissions).
 
 2. **Hosted Zones**
    * You need to configure two public hosted zones in advance: one for TiDB and one for O11Y.
@@ -103,6 +107,14 @@ Update a specific stack:
 bash tidbcloud-byoc-update.sh --stack deploy
 ```
 
+Enable Route 53 permissions for external-dns on the existing EKS node role:
+
+```bash
+bash tidbcloud-byoc-update.sh \
+    --stack dataplane \
+    --enable-external-dns-node-role-policy true
+```
+
 Update all stacks:
 
 ```bash
@@ -145,3 +157,94 @@ bash tidbcloud-byoc-update.sh --stack all \
 ```
 
 Once provided, these values are stored in the CloudFormation stack and replayed automatically on future updates.
+
+## Least-privilege permissions
+
+For environments that cannot use the AWS managed policies listed above, attach a policy like the following to the AWS principal running `tidbcloud-byoc-setup.sh`. Replace `<ACCOUNT_ID>` with your AWS account ID.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CloudFormationDeploy",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:CreateChangeSet",
+        "cloudformation:DescribeChangeSet",
+        "cloudformation:ExecuteChangeSet",
+        "cloudformation:DeleteChangeSet",
+        "cloudformation:DescribeStacks",
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:DescribeStackResource",
+        "cloudformation:DescribeStackResources",
+        "cloudformation:GetTemplate",
+        "cloudformation:GetTemplateSummary",
+        "cloudformation:ValidateTemplate",
+        "cloudformation:CreateStack",
+        "cloudformation:UpdateStack",
+        "cloudformation:DeleteStack",
+        "cloudformation:ListChangeSets",
+        "cloudformation:ListStacks"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageTiDBCloudIAMRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListInstanceProfilesForRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::<ACCOUNT_ID>:role/auto-deploy-sync-image",
+        "arn:aws:iam::<ACCOUNT_ID>:role/auto-deploy-cli",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-eks-service-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-eks-node-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-audit-log-write-only-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-dataplane-manager-assumed-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-sli-assumed-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-sli-firehose-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-control-plane-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-agent-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-eks-cluster-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-eks-node-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-apigw-role"
+      ]
+    },
+    {
+      "Sid": "PassTiDBCloudRoles",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-eks-node-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-eks-service-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-eks-node-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-eks-cluster-role"
+      ]
+    },
+    {
+      "Sid": "ManageTiDBCloudInstanceProfile",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateInstanceProfile",
+        "iam:DeleteInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile"
+      ],
+      "Resource": "arn:aws:iam::<ACCOUNT_ID>:instance-profile/tidbcloud-eks-node-instance-profile"
+    }
+  ]
+}
+```

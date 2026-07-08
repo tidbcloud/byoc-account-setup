@@ -42,10 +42,13 @@ Resources:
             Statement:
               - Action:
                   - ec2:DescribeSubnets
+                  - ec2:DescribeRouteTables
                   - ec2:DescribeVpcEndpointServices
                   - ec2:DescribeVpcEndpointServicePermissions
                   - ec2:DescribeVpcEndpointServiceConfigurations
                   - ec2:CreateVpcEndpointServiceConfiguration
+                  - ec2:CreateRoute
+                  - ec2:DeleteRoute
                   - ec2:ModifyVpcEndpointServicePermissions
                   - ec2:ModifyVpcEndpointServiceConfiguration
                   - ec2:DeleteVpcEndpointServiceConfigurations
