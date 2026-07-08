@@ -131,7 +131,7 @@ update_stack() {
   if [[ -n "$excluded_parameter_keys" ]]; then
     IFS=',' read -ra excluded_keys <<< "$excluded_parameter_keys"
   fi
-  overrides=$(get_parameter_overrides "$stack_name" "${excluded_keys[@]}")
+  overrides=$(get_parameter_overrides "$stack_name" "${excluded_keys[@]+"${excluded_keys[@]}"}")
 
   # shellcheck disable=SC2086
   aws cloudformation deploy \
