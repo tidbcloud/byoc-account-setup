@@ -651,8 +651,6 @@ Resources:
                       - CreateRouteTable
                       - CreateSecurityGroup
                       - CreateLaunchTemplate
-                      - 
-                      
                       - RunInstances
                       - CreateVpcPeeringConnection
                       - CreateVpcEndpoint
