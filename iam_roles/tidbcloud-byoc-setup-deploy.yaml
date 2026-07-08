@@ -514,6 +514,7 @@ Resources:
               - Action:
                   - kms:DescribeKey
                   - kms:ListKeys
+                  - kms:ListAliases
                   - kms:ListResourceTags
                 Effect: Allow
                 Resource: "*"
