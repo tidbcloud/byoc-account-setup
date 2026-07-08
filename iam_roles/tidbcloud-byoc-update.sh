@@ -102,7 +102,7 @@ get_parameter_overrides() {
     --stack-name "$stack_name" \
     --query 'Stacks[0].Parameters[*].[ParameterKey,ParameterValue]' \
     --output text | while read -r key value; do
-      for excluded_key in "${excluded_keys[@]}"; do
+      for excluded_key in "${excluded_keys[@]+"${excluded_keys[@]}"}"; do
         if [[ "$key" == "$excluded_key" ]]; then
           continue 2
         fi
