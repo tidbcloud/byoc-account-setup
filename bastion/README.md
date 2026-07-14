@@ -13,6 +13,129 @@ Before you begin, ensure you have the following:
    * Your AWS CLI must be configured with appropriate credentials and permissions for your AWS account.
    * Necessary permissions include actions for EC2, IAM, and EKS.
 
+   Minimal IAM policy for the AWS CLI identity that runs this Terraform project:
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "ReadInputs",
+         "Effect": "Allow",
+         "Action": [
+           "sts:GetCallerIdentity",
+           "ssm:GetParameter",
+           "eks:DescribeCluster",
+           "ec2:DescribeImages",
+           "ec2:DescribeInstanceAttribute",
+           "ec2:DescribeInstanceCreditSpecifications",
+           "ec2:DescribeInstances",
+           "ec2:DescribeInstanceTypes",
+           "ec2:DescribeNetworkInterfaces",
+           "ec2:DescribeSecurityGroupRules",
+           "ec2:DescribeSecurityGroups",
+           "ec2:DescribeSubnets",
+           "ec2:DescribeTags",
+           "ec2:DescribeVolumes",
+           "ec2:DescribeVpcs"
+         ],
+         "Resource": "*"
+       },
+       {
+         "Sid": "ManageBastionEc2",
+         "Effect": "Allow",
+         "Action": [
+           "ec2:RunInstances",
+           "ec2:TerminateInstances",
+           "ec2:CreateSecurityGroup",
+           "ec2:DeleteSecurityGroup",
+           "ec2:AuthorizeSecurityGroupEgress",
+           "ec2:RevokeSecurityGroupEgress",
+           "ec2:AuthorizeSecurityGroupIngress",
+           "ec2:RevokeSecurityGroupIngress",
+           "ec2:CreateTags",
+           "ec2:DeleteTags"
+         ],
+         "Resource": "*"
+       },
+       {
+         "Sid": "ManageBastionIam",
+         "Effect": "Allow",
+         "Action": [
+           "iam:CreateRole",
+           "iam:DeleteRole",
+           "iam:GetRole",
+           "iam:TagRole",
+           "iam:UntagRole",
+           "iam:CreatePolicy",
+           "iam:DeletePolicy",
+           "iam:GetPolicy",
+           "iam:GetPolicyVersion",
+           "iam:GetRolePolicy",
+           "iam:ListEntitiesForPolicy",
+           "iam:ListInstanceProfilesForRole",
+           "iam:ListInstanceProfileTags",
+           "iam:ListPolicyTags",
+           "iam:ListPolicyVersions",
+           "iam:ListRoleTags",
+           "iam:CreatePolicyVersion",
+           "iam:DeletePolicyVersion",
+           "iam:SetDefaultPolicyVersion",
+           "iam:AttachRolePolicy",
+           "iam:DetachRolePolicy",
+           "iam:ListAttachedRolePolicies",
+           "iam:ListRolePolicies",
+           "iam:CreateInstanceProfile",
+           "iam:DeleteInstanceProfile",
+           "iam:GetInstanceProfile",
+           "iam:TagInstanceProfile",
+           "iam:UntagInstanceProfile",
+           "iam:TagPolicy",
+           "iam:UntagPolicy",
+           "iam:AddRoleToInstanceProfile",
+           "iam:RemoveRoleFromInstanceProfile",
+           "iam:PassRole"
+         ],
+         "Resource": "*"
+       },
+       {
+         "Sid": "ManageEksAccess",
+         "Effect": "Allow",
+         "Action": [
+           "eks:CreateAccessEntry",
+           "eks:DeleteAccessEntry",
+           "eks:DescribeAccessEntry",
+           "eks:AssociateAccessPolicy",
+           "eks:DisassociateAccessPolicy",
+           "eks:ListAssociatedAccessPolicies"
+         ],
+         "Resource": "*"
+       },
+       {
+         "Sid": "OptionalTerraformStateS3",
+         "Effect": "Allow",
+         "Action": [
+           "s3:GetBucketLocation",
+           "s3:ListBucket"
+         ],
+         "Resource": "arn:aws:s3:::YOUR_TF_STATE_BUCKET"
+       },
+       {
+         "Sid": "OptionalTerraformStateS3Objects",
+         "Effect": "Allow",
+         "Action": [
+           "s3:GetObject",
+           "s3:PutObject",
+           "s3:DeleteObject"
+         ],
+         "Resource": "arn:aws:s3:::YOUR_TF_STATE_BUCKET/YOUR_STATE_PREFIX/*"
+       }
+     ]
+   }
+   ```
+
+   The `OptionalTerraformStateS3` and `OptionalTerraformStateS3Objects` statements are only required when you configure Terraform to persist state in an S3 backend. The checked-in backend is local by default.
+
 3. **Existing TiDB Cloud BYOC Cluster**  
    * You need an active TiDB Cloud BYOC cluster.
    * You'll need its EKS cluster name.
@@ -93,7 +216,7 @@ Follow these steps to deploy the bastion(s):
          auth_key  = "tskey-key-xxxxxxxx"
       },
       o11y = {
-         eks_cluster_name    = "your-o11y-eks-cluster" # Often the same as TiDB EKS cluster
+         eks_cluster_name    = "your-o11y-eks-cluster"
          auth_key  = "tskey-key-xxxxxxxx"
       }
    }

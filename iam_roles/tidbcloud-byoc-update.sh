@@ -102,7 +102,7 @@ get_parameter_overrides() {
     --stack-name "$stack_name" \
     --query 'Stacks[0].Parameters[*].[ParameterKey,ParameterValue]' \
     --output text | while read -r key value; do
-      for excluded_key in "${excluded_keys[@]}"; do
+      for excluded_key in "${excluded_keys[@]+"${excluded_keys[@]}"}"; do
         if [[ "$key" == "$excluded_key" ]]; then
           continue 2
         fi
@@ -131,7 +131,7 @@ update_stack() {
   if [[ -n "$excluded_parameter_keys" ]]; then
     IFS=',' read -ra excluded_keys <<< "$excluded_parameter_keys"
   fi
-  overrides=$(get_parameter_overrides "$stack_name" "${excluded_keys[@]}")
+  overrides=$(get_parameter_overrides "$stack_name" "${excluded_keys[@]+"${excluded_keys[@]}"}")
 
   # shellcheck disable=SC2086
   aws cloudformation deploy \
