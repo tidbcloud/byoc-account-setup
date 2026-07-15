@@ -19,6 +19,7 @@ Optional:
                                      (e.g. Z111AAA,Z222BBB)
   --additional-o11y-hz-ids <ids>     Comma-separated additional o11y hosted zone IDs for multi-region
                                      (e.g. Z111AAA,Z222BBB)
+  --image-delivery-mode <push|pull>  Image delivery mode (default: push)
   --o11y-global-role-arns <arns>     Comma-separated list of O11Y global role ARNs
                                      (default: arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw)
   --github-runner-id <id>            Google account ID for GitHub runner
@@ -39,6 +40,7 @@ TidbPCAArn=""
 AdditionalPCAArns=""
 AdditionalTidbHostedZoneIds=""
 AdditionalO11yHostedZoneIds=""
+ImageDeliveryMode="push"
 
 require_arg() {
   if [[ $# -lt 2 || "${2-}" == -* ]]; then
@@ -86,6 +88,9 @@ while [[ $# -gt 0 ]]; do
     --additional-o11y-hz-ids)
       require_arg "$@"
       AdditionalO11yHostedZoneIds="${2// /}"; shift 2 ;;
+    --image-delivery-mode)
+      require_arg "$@"
+      ImageDeliveryMode="$2"; shift 2 ;;
     --o11y-global-role-arns)
       require_arg "$@"
       O11yGlobalRoleArns="$2"; shift 2 ;;
@@ -99,6 +104,11 @@ while [[ $# -gt 0 ]]; do
       usage ;;
   esac
 done
+
+if [[ "$ImageDeliveryMode" != "push" && "$ImageDeliveryMode" != "pull" ]]; then
+  echo "Error: --image-delivery-mode must be either 'push' or 'pull'"
+  exit 1
+fi
 
 # Validate required parameters
 missing=()
@@ -125,6 +135,7 @@ aws cloudformation deploy \
   --template-file ./tidbcloud-byoc-setup-deploy.yaml \
   --parameter-overrides ControlPlaneAccountId=$ControlPlaneAccountId \
                GithubRunnerGoogleAccountId=$GithubRunnerGoogleAccountId \
+               ImageDeliveryMode=$ImageDeliveryMode \
                O11yHostedZoneId=$O11yHostedZoneId \
                $deploy_overrides \
   --capabilities CAPABILITY_NAMED_IAM

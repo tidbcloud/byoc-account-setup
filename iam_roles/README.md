@@ -47,6 +47,12 @@ Before you begin, ensure you have the following:
    | `--additional-tidb-hz-ids` | Comma-separated IDs of additional TiDB hosted zones for extra regions. Omit if all regions share the same hosted zone specified by `--tidb-hz-id`. (e.g. `Z111AAA,Z222BBB`) |
    | `--additional-o11y-hz-ids` | Comma-separated IDs of additional O11Y hosted zones for extra regions. Omit if all regions share the same hosted zone specified by `--o11y-hz-id`. (e.g. `Z111AAA,Z222BBB`) |
 
+   Image delivery is also configurable:
+
+   | Parameter | Description |
+   |-----------|-------------|
+   | `--image-delivery-mode` | Image delivery mode, either `push` or `pull`. Defaults to `push`. |
+
 2. **Run Script**
 
    Single-region:
@@ -95,6 +101,33 @@ Before you begin, ensure you have the following:
    ```
    > Replace `<parameter>` with the value prepared in the previous step
 
+### Image delivery modes
+
+The `auto-deploy-sync-image` role supports one image delivery mode at a time:
+
+- `push` (default): PingCAP's Google OIDC GitHub runner assumes the role and pushes images into customer ECR repositories tagged with `ManagedBy=PingCAP`. This preserves the existing behavior.
+- `pull`: customer EC2 assumes the role through the `auto-deploy-sync-image` instance profile. The instance can pull approved images from the PingCAP DBAAS (`380838443567`) and observability (`557537366020`) ECR accounts in `us-west-2`, then copy them into ECR repositories in any region of the customer account.
+
+To select pull mode during initialization, add the mode flag to the normal setup command:
+
+```bash
+bash tidbcloud-byoc-setup.sh \
+    --image-delivery-mode pull \
+    --control-plane-id <ControlPlaneAccountId> \
+    --clinic-id <ClinicAccountId> \
+    --tidb-hz-id <TidbHostedZoneId> \
+    --o11y-hz-id <O11yHostedZoneId> \
+    --pca-arn <TidbPCAArn>
+```
+
+Pull mode also requires PingCAP to grant repository-level pull access to the following customer principal:
+
+```text
+arn:aws:iam::<ACCOUNT_ID>:role/auto-deploy-sync-image
+```
+
+The PingCAP-side grants are maintained separately in `docker-image-controller`. The AWS principal that launches or updates the customer EC2 instance must also be allowed to pass `auto-deploy-sync-image` to EC2.
+
 ## Update
 
 If you need to update existing CloudFormation stacks (e.g. after modifying the YAML templates), use `tidbcloud-byoc-update.sh`. It automatically fetches existing parameters from deployed stacks, so you don't need to pass them again for those parameters.
@@ -123,6 +156,28 @@ bash tidbcloud-byoc-update.sh --stack all
 
 > `--stack` must be one of `deploy`, `dataplane`, `o11y`, or `all`
 > The script requires that the stack has already been created via `tidbcloud-byoc-setup.sh`
+
+### Changing image delivery mode
+
+Switch an existing deployment to customer pull mode:
+
+```bash
+bash tidbcloud-byoc-update.sh \
+    --stack deploy \
+    --image-delivery-mode pull
+```
+
+This replaces the role's Google OIDC trust and push policy with the EC2 trust and pull policy, and creates the `auto-deploy-sync-image` instance profile.
+
+Switch back to PingCAP push mode:
+
+```bash
+bash tidbcloud-byoc-update.sh \
+    --stack deploy \
+    --image-delivery-mode push
+```
+
+This restores the Google OIDC trust and tag-constrained push policy and removes the pull-mode instance profile. The `auto-deploy-sync-image` role itself is retained in both directions.
 
 ### Adding multi-region support to an existing deployment
 
@@ -243,7 +298,10 @@ For environments that cannot use the AWS managed policies listed above, attach a
         "iam:AddRoleToInstanceProfile",
         "iam:RemoveRoleFromInstanceProfile"
       ],
-      "Resource": "arn:aws:iam::<ACCOUNT_ID>:instance-profile/tidbcloud-eks-node-instance-profile"
+      "Resource": [
+        "arn:aws:iam::<ACCOUNT_ID>:instance-profile/tidbcloud-eks-node-instance-profile",
+        "arn:aws:iam::<ACCOUNT_ID>:instance-profile/auto-deploy-sync-image"
+      ]
     }
   ]
 }

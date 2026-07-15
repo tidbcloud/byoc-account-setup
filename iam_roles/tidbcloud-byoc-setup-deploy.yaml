@@ -9,6 +9,13 @@ Parameters:
     Type: String
     Description: "The Google Account ID of the GitHub runner for PingCAP"
     Default: "114667344163696279999"
+  ImageDeliveryMode:
+    Type: String
+    Description: "The image delivery mode: PingCAP pushes images to customer ECR, or customer EC2 pulls images from PingCAP ECR"
+    Default: push
+    AllowedValues:
+      - push
+      - pull
   O11yHostedZoneId:
     Type: String
     Description: "The Route 53 hosted zone ID to manage DNS records for o11y"
@@ -18,65 +25,114 @@ Parameters:
     Description: "Additional o11y hosted zone IDs for multi-region deployments (comma-separated IDs, e.g. Z111AAA,Z222BBB)"
 Conditions:
   HasAdditionalO11yZones: !Not [!Equals [!Join [",", !Ref AdditionalO11yHostedZoneIds], ""]]
+  IsPushImageDelivery: !Equals [!Ref ImageDeliveryMode, push]
+  IsPullImageDelivery: !Equals [!Ref ImageDeliveryMode, pull]
 Resources:
   TiDBCloudSyncImageRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: auto-deploy-sync-image
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Federated: "accounts.google.com"
-            Action: sts:AssumeRoleWithWebIdentity
-            Condition:
-              StringEquals:
-                accounts.google.com:aud: !Sub ${GithubRunnerGoogleAccountId}
+      AssumeRolePolicyDocument: !If
+        - IsPushImageDelivery
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Federated: "accounts.google.com"
+              Action: sts:AssumeRoleWithWebIdentity
+              Condition:
+                StringEquals:
+                  accounts.google.com:aud: !Sub ${GithubRunnerGoogleAccountId}
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: ec2.amazonaws.com
+              Action: sts:AssumeRole
       Policies:
         - PolicyName: auto-deploy-sync-image-policy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Action:
-                  - ecr:GetAuthorizationToken
-                Effect: Allow
-                Resource:
-                  - "*"
-                Sid: GetToken
-              - Action:
-                  - ecr:DescribeRepositories
-                Effect: Allow
-                Resource:
-                  - "*"
-                Sid: CheckRepository
-              - Action:
-                  - ecr:CreateRepository
-                  - ecr:TagResource
-                Condition:
-                  ForAllValues:StringEquals:
-                    aws:TagKeys:
-                      - ManagedBy
-                  StringEquals:
-                    aws:RequestTag/ManagedBy: PingCAP
-                Effect: Allow
-                Resource:
-                  - "*"
-                Sid: CreateRepository
-              - Action:
-                  - ecr:BatchCheckLayerAvailability
-                  - ecr:BatchGetImage
-                  - ecr:InitiateLayerUpload
-                  - ecr:UploadLayerPart
-                  - ecr:CompleteLayerUpload
-                  - ecr:PutImage
-                Condition:
-                  StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
-                Effect: Allow
-                Resource:
-                  - "*"
-                Sid: PushImage
+          PolicyDocument: !If
+            - IsPushImageDelivery
+            - Version: "2012-10-17"
+              Statement:
+                - Action:
+                    - ecr:GetAuthorizationToken
+                  Effect: Allow
+                  Resource:
+                    - "*"
+                  Sid: GetToken
+                - Action:
+                    - ecr:DescribeRepositories
+                  Effect: Allow
+                  Resource:
+                    - "*"
+                  Sid: CheckRepository
+                - Action:
+                    - ecr:CreateRepository
+                    - ecr:TagResource
+                  Condition:
+                    ForAllValues:StringEquals:
+                      aws:TagKeys:
+                        - ManagedBy
+                    StringEquals:
+                      aws:RequestTag/ManagedBy: PingCAP
+                  Effect: Allow
+                  Resource:
+                    - "*"
+                  Sid: CreateRepository
+                - Action:
+                    - ecr:BatchCheckLayerAvailability
+                    - ecr:BatchGetImage
+                    - ecr:InitiateLayerUpload
+                    - ecr:UploadLayerPart
+                    - ecr:CompleteLayerUpload
+                    - ecr:PutImage
+                  Condition:
+                    StringEquals:
+                      aws:ResourceTag/ManagedBy: PingCAP
+                  Effect: Allow
+                  Resource:
+                    - "*"
+                  Sid: PushImage
+            - Version: "2012-10-17"
+              Statement:
+                - Sid: AuthToAnyECR
+                  Effect: Allow
+                  Action:
+                    - ecr:GetAuthorizationToken
+                  Resource: "*"
+                - Sid: PullFromPingCAPECR
+                  Effect: Allow
+                  Action:
+                    - ecr:BatchCheckLayerAvailability
+                    - ecr:BatchGetImage
+                    - ecr:GetDownloadUrlForLayer
+                    - ecr:DescribeImages
+                  Resource:
+                    - !Sub arn:${AWS::Partition}:ecr:us-west-2:380838443567:repository/*
+                    - !Sub arn:${AWS::Partition}:ecr:us-west-2:557537366020:repository/*
+                - Sid: PushToBYOCECR
+                  Effect: Allow
+                  Action:
+                    - ecr:CreateRepository
+                    - ecr:DescribeRepositories
+                    - ecr:TagResource
+                    - ecr:BatchCheckLayerAvailability
+                    - ecr:InitiateLayerUpload
+                    - ecr:UploadLayerPart
+                    - ecr:CompleteLayerUpload
+                    - ecr:PutImage
+                    - ecr:BatchGetImage
+                    - ecr:GetDownloadUrlForLayer
+                  Resource:
+                    - !Sub arn:${AWS::Partition}:ecr:*:${AWS::AccountId}:repository/*
+  TiDBCloudSyncImageInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Condition: IsPullImageDelivery
+    Properties:
+      InstanceProfileName: auto-deploy-sync-image
+      Roles:
+        - !Ref TiDBCloudSyncImageRole
   TiDBCloudAutoDeployRole:
     Type: AWS::IAM::Role
     Properties:
