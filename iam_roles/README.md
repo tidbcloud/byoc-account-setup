@@ -126,7 +126,7 @@ Pull mode also requires PingCAP to grant repository-level pull access to the fol
 arn:aws:iam::<ACCOUNT_ID>:role/auto-deploy-sync-image
 ```
 
-The PingCAP-side grants are maintained separately in `docker-image-controller`. The AWS principal that launches or updates the customer EC2 instance must also be allowed to pass `auto-deploy-sync-image` to EC2.
+Contact PingCAP to configure the required repository-level pull access. The AWS principal that launches or updates the customer EC2 instance must also be allowed to pass `auto-deploy-sync-image` to EC2.
 
 ## Update
 
