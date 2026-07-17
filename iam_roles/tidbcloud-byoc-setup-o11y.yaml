@@ -60,7 +60,8 @@ Resources:
               - Action:
                   - s3:CreateBucket
                 Effect: Allow
-                Resource: "*"
+                Resource:
+                  - arn:aws:s3:::o11y*
               - Action:
                   - s3:ListBucket
                   - s3:GetLifecycleConfiguration
@@ -77,11 +78,6 @@ Resources:
                 Effect: Allow
                 Resource:
                   - arn:aws:s3:::o11y*/*
-              - Action:
-                  - sts:AssumeRole
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-*
               - Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies
