@@ -81,7 +81,7 @@ Resources:
                   - sts:AssumeRole
                 Effect: Allow
                 Resource:
-                  - !Sub arn:aws:iam::${AWS::AccountId}:role/*
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-*
               - Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies
