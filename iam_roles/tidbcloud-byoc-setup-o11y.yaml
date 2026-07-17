@@ -52,21 +52,36 @@ Resources:
                   - ec2:ModifyVpcEndpointServicePermissions
                   - ec2:ModifyVpcEndpointServiceConfiguration
                   - ec2:DeleteVpcEndpointServiceConfigurations
-                  - s3:CreateBucket
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                  - s3:GetLifecycleConfiguration
-                  - s3:PutLifecycleConfiguration
-                  - s3:AbortMultipartUpload
-                  - s3:ListMultipartUploadParts
-                  - s3:ListBucket
-                  - sts:AssumeRole
                   - sts:GetCallerIdentity
                   - ec2:DescribeLaunchTemplateVersions
                   - ecr:GetAuthorizationToken
                 Effect: Allow
                 Resource: "*"
+              - Action:
+                  - s3:CreateBucket
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - s3:ListBucket
+                  - s3:GetLifecycleConfiguration
+                  - s3:PutLifecycleConfiguration
+                Effect: Allow
+                Resource:
+                  - arn:aws:s3:::o11y*
+              - Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Effect: Allow
+                Resource:
+                  - arn:aws:s3:::o11y*/*
+              - Action:
+                  - sts:AssumeRole
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/*
               - Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies

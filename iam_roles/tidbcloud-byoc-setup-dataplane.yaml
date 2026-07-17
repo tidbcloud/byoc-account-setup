@@ -320,7 +320,8 @@ Resources:
               - Effect: Allow
                 Action:
                   - sts:AssumeRole
-                Resource: "*"
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-agent-role
         # Attach inline policy to allow tidb-cluster
         - PolicyName: AllowTiDBCluster
           PolicyDocument:
@@ -329,7 +330,8 @@ Resources:
               - Effect: Allow
                 Action:
                   - sts:AssumeRole
-                Resource: "*"
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-audit-log-write-only-role
               - Effect: Allow
                 Action:
                   - ec2:RebootInstances
@@ -346,9 +348,18 @@ Resources:
                   - kms:Decrypt
                   - kms:ReEncrypt*
                   - kms:GenerateDataKey*
-                  - kms:CreateGrant
                   - kms:DescribeKey
-                Resource: "*"
+                Resource:
+                  - !Sub arn:aws:kms:*:${AWS::AccountId}:key/*
+              - Sid: AllowCreateKMSGrantForAWSResource
+                Effect: Allow
+                Action:
+                  - kms:CreateGrant
+                Resource:
+                  - !Sub arn:aws:kms:*:${AWS::AccountId}:key/*
+                Condition:
+                  Bool:
+                    kms:GrantIsForAWSResource: "true"
         - PolicyName: AllowSliReporter
           PolicyDocument:
             Version: "2012-10-17"
