@@ -68,6 +68,7 @@ Resources:
                 Effect: Allow
                 Resource:
                   - arn:aws:s3:::o11y*
+                  - arn:aws:s3:::loki*
               - Action:
                   - s3:GetObject
                   - s3:PutObject
@@ -80,6 +81,7 @@ Resources:
                 Effect: Allow
                 Resource:
                   - arn:aws:s3:::o11y*/*
+                  - arn:aws:s3:::loki*/*
               - Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies
