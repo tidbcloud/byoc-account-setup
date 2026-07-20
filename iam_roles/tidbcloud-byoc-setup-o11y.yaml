@@ -59,10 +59,6 @@ Resources:
                 Resource: "*"
               - Action:
                   - s3:CreateBucket
-                Effect: Allow
-                Resource:
-                  - arn:aws:s3:::o11y*
-              - Action:
                   - s3:ListBucket
                   - s3:GetLifecycleConfiguration
                   - s3:PutLifecycleConfiguration
