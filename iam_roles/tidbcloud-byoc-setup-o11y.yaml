@@ -67,8 +67,7 @@ Resources:
                     s3:ResourceAccount: !Ref AWS::AccountId
                 Effect: Allow
                 Resource:
-                  - arn:aws:s3:::o11y*
-                  - arn:aws:s3:::loki*
+                  - arn:aws:s3:::*o11y*
               - Action:
                   - s3:GetObject
                   - s3:PutObject
@@ -80,8 +79,7 @@ Resources:
                     s3:ResourceAccount: !Ref AWS::AccountId
                 Effect: Allow
                 Resource:
-                  - arn:aws:s3:::o11y*/*
-                  - arn:aws:s3:::loki*/*
+                  - arn:aws:s3:::*o11y*/*
               - Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies
