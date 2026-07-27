@@ -47,10 +47,6 @@ Parameters:
     Type: String
     Default: "tidbcloud-sli-data"
     Description: "Prefix for SLI data buckets readable by Clinic"
-  CustomerAssumeRoleTagValue:
-    Type: String
-    Default: "true"
-    Description: "Required value for the tidbcloud.com/allow-assume-role tag on customer-provided import/CDC roles"
 Conditions:
   EnableExternalDNSNodeRolePolicyCondition: !Equals [!Ref EnableExternalDNSNodeRolePolicy, "true"]
   HasAdditionalPCAs: !Not [!Equals [!Join [",", !Ref AdditionalPCAArns], ""]]
@@ -337,7 +333,7 @@ Resources:
                   - arn:aws:iam::*:role/*
                 Condition:
                   StringEquals:
-                    "aws:ResourceTag/tidbcloud.com/allow-assume-role": !Ref CustomerAssumeRoleTagValue
+                    "aws:ResourceTag/tidbcloud.com/allow-assume-role": "true"
         # Attach inline policy to allow tidb-cluster
         - PolicyName: AllowTiDBCluster
           PolicyDocument:
