@@ -324,7 +324,6 @@ Resources:
                 Resource:
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-agent-role
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-audit-log-write-only-role
-                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-sli-assumed-role
               - Sid: AllowAssumeCustomerTaggedRoles
                 Effect: Allow
                 Action:
