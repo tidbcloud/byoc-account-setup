@@ -47,6 +47,10 @@ Parameters:
     Type: String
     Default: "tidbcloud-sli-data"
     Description: "Prefix for SLI data buckets readable by Clinic"
+  CustomerAssumeRoleTagValue:
+    Type: String
+    Default: "true"
+    Description: "Required value for the tidbcloud.com/allow-assume-role tag on customer-provided import/CDC roles"
 Conditions:
   EnableExternalDNSNodeRolePolicyCondition: !Equals [!Ref EnableExternalDNSNodeRolePolicy, "true"]
   HasAdditionalPCAs: !Not [!Equals [!Join [",", !Ref AdditionalPCAArns], ""]]
@@ -312,24 +316,33 @@ Resources:
                 Condition:
                   StringEquals:
                     aws:ResourceTag/k8s.io/cluster-autoscaler/enabled: "true"
-        # Attach inline policy to allow o11y-agent
-        - PolicyName: AllowO11yAgent
+        # Attach inline policy to allow assuming pre-provisioned TiDB Cloud roles and customer-provided import/CDC roles
+        - PolicyName: AllowAssumeRoles
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Effect: Allow
+              - Sid: AllowAssumePreProvisionedRoles
+                Effect: Allow
                 Action:
                   - sts:AssumeRole
-                Resource: "*"
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-agent-role
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-audit-log-write-only-role
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-sli-assumed-role
+              - Sid: AllowAssumeCustomerTaggedRoles
+                Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource:
+                  - arn:aws:iam::*:role/*
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/tidbcloud.com/allow-assume-role": !Ref CustomerAssumeRoleTagValue
         # Attach inline policy to allow tidb-cluster
         - PolicyName: AllowTiDBCluster
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Effect: Allow
-                Action:
-                  - sts:AssumeRole
-                Resource: "*"
               - Effect: Allow
                 Action:
                   - ec2:RebootInstances
@@ -349,6 +362,9 @@ Resources:
                   - kms:CreateGrant
                   - kms:DescribeKey
                 Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
         - PolicyName: AllowSliReporter
           PolicyDocument:
             Version: "2012-10-17"
