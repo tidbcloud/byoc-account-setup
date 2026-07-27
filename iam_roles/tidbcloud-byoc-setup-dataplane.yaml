@@ -332,7 +332,7 @@ Resources:
                   - arn:aws:iam::*:role/*
                 Condition:
                   StringEquals:
-                    "aws:ResourceTag/tidbcloud.com/allow-access": "true"
+                    "aws:ResourceTag/tidbcloud.com/allow-dataplane-access": "true"
         # Attach inline policy to allow tidb-cluster
         - PolicyName: AllowTiDBCluster
           PolicyDocument:
@@ -359,7 +359,7 @@ Resources:
                 Resource: "*"
                 Condition:
                   StringEquals:
-                    "aws:ResourceTag/tidbcloud.com/allow-access": "true"
+                    "aws:ResourceTag/tidbcloud.com/allow-dataplane-access": "true"
         - PolicyName: AllowSliReporter
           PolicyDocument:
             Version: "2012-10-17"
