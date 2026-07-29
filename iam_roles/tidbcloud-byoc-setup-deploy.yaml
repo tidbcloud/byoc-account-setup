@@ -104,8 +104,18 @@ Resources:
               - Action:
                   - iam:GetRole
                 Effect: Allow
-                Resource: "*"
-                Sid: GetAnyRole
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/auto-deploy-cli
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-control-plane-role
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-agent-role
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-cluster-role
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-node-role
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-apigw-role
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-sli-firehose-role
+                  - arn:aws:iam::*:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup
+                  - arn:aws:iam::*:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS
+                  - arn:aws:iam::*:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway
+                Sid: GetDeployTargetRoles
               - Action:
                   - iam:UpdateAssumeRolePolicy
                 Effect: Allow
