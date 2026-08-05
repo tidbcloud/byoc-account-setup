@@ -15,6 +15,8 @@ Options:
                                      (e.g. Z111AAA,Z222BBB)
   --additional-o11y-hz-ids <ids>     Comma-separated additional o11y hosted zone IDs for multi-region
                                      (e.g. Z111AAA,Z222BBB)
+  --image-delivery-mode <push|pull>  Image delivery mode.
+                                     Only applies when updating 'deploy' or 'all'.
   --enable-external-dns-node-role-policy <true|false>
                                      Whether to enable Route53 permissions for external-dns on EKS node role.
                                      Only applies when updating 'dataplane' or 'all'.
@@ -30,6 +32,7 @@ STACK=""
 AdditionalPCAArns=""
 AdditionalTidbHostedZoneIds=""
 AdditionalO11yHostedZoneIds=""
+ImageDeliveryMode=""
 EnableExternalDNSNodeRolePolicy=""
 
 require_arg() {
@@ -66,6 +69,9 @@ while [[ $# -gt 0 ]]; do
     --additional-o11y-hz-ids)
       require_arg "$@"
       AdditionalO11yHostedZoneIds="${2// /}"; shift 2 ;;
+    --image-delivery-mode)
+      require_arg "$@"
+      ImageDeliveryMode="$2"; shift 2 ;;
     --enable-external-dns-node-role-policy)
       require_arg "$@"
       EnableExternalDNSNodeRolePolicy="$2"; shift 2 ;;
@@ -81,6 +87,16 @@ if [[ -z "$STACK" ]]; then
   echo "Error: missing required parameter: --stack"
   echo ""
   usage
+fi
+
+if [[ -n "$ImageDeliveryMode" && "$ImageDeliveryMode" != "push" && "$ImageDeliveryMode" != "pull" ]]; then
+  echo "Error: --image-delivery-mode must be either 'push' or 'pull'"
+  exit 1
+fi
+
+if [[ -n "$ImageDeliveryMode" && "$STACK" != "deploy" && "$STACK" != "all" ]]; then
+  echo "Error: --image-delivery-mode only applies to stack 'deploy' or 'all'"
+  exit 1
 fi
 
 if [[ -n "$EnableExternalDNSNodeRolePolicy" && "$EnableExternalDNSNodeRolePolicy" != "true" && "$EnableExternalDNSNodeRolePolicy" != "false" ]]; then
@@ -144,9 +160,14 @@ update_stack() {
   echo "Stack ${stack_name} updated successfully (or no changes were necessary)."
 }
 
+deploy_excluded_parameter_keys=""
 deploy_overrides=""
+if [[ -n "$ImageDeliveryMode" ]]; then
+  deploy_overrides="ImageDeliveryMode=$ImageDeliveryMode"
+  deploy_excluded_parameter_keys="ImageDeliveryMode"
+fi
 if [[ -n "$AdditionalO11yHostedZoneIds" ]]; then
-  deploy_overrides="AdditionalO11yHostedZoneIds=$(hz_ids_to_arns "$AdditionalO11yHostedZoneIds")"
+  deploy_overrides="$deploy_overrides AdditionalO11yHostedZoneIds=$(hz_ids_to_arns "$AdditionalO11yHostedZoneIds")"
 fi
 
 dataplane_excluded_parameter_keys=""
@@ -167,7 +188,7 @@ fi
 
 case "$STACK" in
   deploy)
-    update_stack "tidbcloud-byoc-setup-deploy" "./tidbcloud-byoc-setup-deploy.yaml" "$deploy_overrides"
+    update_stack "tidbcloud-byoc-setup-deploy" "./tidbcloud-byoc-setup-deploy.yaml" "$deploy_overrides" "$deploy_excluded_parameter_keys"
     ;;
   dataplane)
     update_stack "tidbcloud-byoc-setup-dataplane" "./tidbcloud-byoc-setup-dataplane.yaml" "$dataplane_overrides" "$dataplane_excluded_parameter_keys"
@@ -176,7 +197,7 @@ case "$STACK" in
     update_stack "tidbcloud-byoc-setup-o11y" "./tidbcloud-byoc-setup-o11y.yaml" "$o11y_overrides"
     ;;
   all)
-    update_stack "tidbcloud-byoc-setup-deploy" "./tidbcloud-byoc-setup-deploy.yaml" "$deploy_overrides"
+    update_stack "tidbcloud-byoc-setup-deploy" "./tidbcloud-byoc-setup-deploy.yaml" "$deploy_overrides" "$deploy_excluded_parameter_keys"
     update_stack "tidbcloud-byoc-setup-dataplane" "./tidbcloud-byoc-setup-dataplane.yaml" "$dataplane_overrides" "$dataplane_excluded_parameter_keys"
     update_stack "tidbcloud-byoc-setup-o11y" "./tidbcloud-byoc-setup-o11y.yaml" "$o11y_overrides"
     ;;
