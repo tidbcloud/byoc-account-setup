@@ -124,6 +124,16 @@ bash tidbcloud-byoc-update.sh --stack all
 > `--stack` must be one of `deploy`, `dataplane`, `o11y`, or `all`
 > The script requires that the stack has already been created via `tidbcloud-byoc-setup.sh`
 
+### Auto-deploy managed policies
+
+The deploy stack attaches four customer-managed policies to `auto-deploy-cli` instead of maintaining its permissions in one inline policy. This avoids the IAM inline-policy size limit while preserving the role's existing permissions. The policies are created before CloudFormation updates the role to reference them, so existing deployments can use the normal command:
+
+```bash
+bash tidbcloud-byoc-update.sh --stack deploy
+```
+
+The managed policy names are `auto-deploy-cli-control-plane`, `auto-deploy-cli-compute`, `auto-deploy-cli-observability`, and `auto-deploy-cli-integrations`.
+
 ### Adding multi-region support to an existing deployment
 
 Existing single-region deployments can be extended to cover additional regions without re-creating any IAM roles. The new multi-region parameters default to empty, so a plain `--stack all` update is safe and causes no functional change.
@@ -220,6 +230,30 @@ For environments that cannot use the AWS managed policies listed above, attach a
         "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-eks-cluster-role",
         "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-eks-node-role",
         "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-apigw-role"
+      ]
+    },
+    {
+      "Sid": "ManageAutoDeployManagedPolicies",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreatePolicy",
+        "iam:DeletePolicy",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListPolicyVersions",
+        "iam:CreatePolicyVersion",
+        "iam:DeletePolicyVersion",
+        "iam:SetDefaultPolicyVersion",
+        "iam:ListEntitiesForPolicy",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::<ACCOUNT_ID>:role/auto-deploy-cli",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-control-plane",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-compute",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-observability",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-integrations"
       ]
     },
     {
