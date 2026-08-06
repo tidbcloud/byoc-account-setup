@@ -96,14 +96,16 @@ Resources:
               StringEquals:
                 accounts.google.com:aud: !Sub ${GithubRunnerGoogleAccountId}
       ManagedPolicyArns:
-        - !Ref TiDBCloudAutoDeployControlPlanePolicy
+        - !Ref TiDBCloudAutoDeployIdentityPolicy
         - !Ref TiDBCloudAutoDeployComputePolicy
-        - !Ref TiDBCloudAutoDeployObservabilityPolicy
-        - !Ref TiDBCloudAutoDeployIntegrationsPolicy
-  TiDBCloudAutoDeployControlPlanePolicy:
+        - !Ref TiDBCloudAutoDeployStoragePolicy
+        - !Ref TiDBCloudAutoDeployNetworkPolicy
+        - !Ref TiDBCloudAutoDeployMonitoringPolicy
+        - !Ref TiDBCloudAutoDeployKMSPolicy
+  TiDBCloudAutoDeployIdentityPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      ManagedPolicyName: auto-deploy-cli-control-plane
+      ManagedPolicyName: auto-deploy-cli-iam
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -168,6 +170,13 @@ Resources:
               StringEquals:
                 iam:AWSServiceName: ops.apigateway.amazonaws.com
             Sid: ApiGatewayCreateServiceLinkedRole
+  TiDBCloudAutoDeployComputePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: auto-deploy-cli-compute
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
           # Requested by o11y
           - Action:
               - elasticloadbalancing:DescribeLoadBalancers
@@ -204,13 +213,6 @@ Resources:
             Effect: Allow
             Resource: arn:aws:cloudformation:*:*:stack/auto-deploy-o11y-*/*
             Sid: CloudFormationWrite
-  TiDBCloudAutoDeployComputePolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: auto-deploy-cli-compute
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
           # Requested by o11y eks
           - Action:
               - ec2:RunInstances
@@ -320,10 +322,10 @@ Resources:
             Effect: Allow
             Resource: "*"
             Sid: "EKSReadOnly"
-  TiDBCloudAutoDeployObservabilityPolicy:
+  TiDBCloudAutoDeployStoragePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      ManagedPolicyName: auto-deploy-cli-observability
+      ManagedPolicyName: auto-deploy-cli-storage
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -360,6 +362,43 @@ Resources:
             Effect: Allow
             Resource: "*"
             Sid: "S3ReadOnly"
+          - Action:
+              - glue:CreateDatabase
+              - glue:DeleteDatabase
+              - glue:CreateTable
+              - glue:DeleteTable
+              - glue:GetTable
+              - glue:TagResource
+              - glue:GetDatabase
+              - glue:GetTags
+            Effect: Allow
+            Resource:
+              - arn:aws:glue:*:*:catalog
+              - arn:aws:glue:*:*:database/tidbcloud-*
+              - arn:aws:glue:*:*:table/tidbcloud-*
+              - arn:aws:glue:*:*:userDefinedFunction/tidbcloud-*/*
+          # Requested by sli
+          - Action:
+              - firehose:CreateDeliveryStream
+              - firehose:DeleteDeliveryStream
+              - firehose:TagDeliveryStream
+            Effect: Allow
+            Resource:
+              - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
+          # Requested by sli
+          - Action:
+              - firehose:ListTagsForDeliveryStream
+              - firehose:DescribeDeliveryStream
+            Effect: Allow
+            Resource:
+              - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
+  TiDBCloudAutoDeployNetworkPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: auto-deploy-cli-network
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
           # Requested by o11y
           - Action:
               - route53:ChangeResourceRecordSets
@@ -386,23 +425,6 @@ Resources:
             Effect: Allow
             Resource: "*"
             Sid: "Route53ReadOnly"
-          # Requested by o11y
-          - Action:
-              - cloudwatch:DescribeAlarms
-              - cloudwatch:ListTagsForResource
-            Effect: Allow
-            Resource:
-              - arn:aws:cloudwatch:*:*:alarm:WatchdogDown-*
-              - arn:aws:cloudwatch:*:*:alarm:AlertmanagerClusterFailedToSendAlerts-*
-            Sid: "CloudWatchReadOnly"
-          # Requested by o11y
-          - Action:
-              - cloudwatch:PutMetricAlarm
-            Effect: Allow
-            Resource:
-              - arn:aws:cloudwatch:*:*:alarm:WatchdogDown-*
-              - arn:aws:cloudwatch:*:*:alarm:AlertmanagerClusterFailedToSendAlerts-*
-            Sid: "CloudWatchWrite"
           # Requested by o11y
           - Action:
               - acm:RequestCertificate
@@ -440,6 +462,57 @@ Resources:
             Effect: Allow
             Resource: "*"
             Sid: "WAFReadOnly"
+          # Requested by sli
+          - Action:
+              - vpce:AllowMultiRegion
+            Effect: Allow
+            Resource: "*"
+          # Requested by sli
+          - Action:
+              - apigateway:GET
+              - apigateway:POST
+              - apigateway:PUT
+              - apigateway:DELETE
+              - apigateway:TagResource
+            Effect: Allow
+            Resource:
+              - arn:aws:apigateway:*::/restapis
+              - arn:aws:apigateway:*::/restapis/*
+              - arn:aws:apigateway:*::/vpclinks
+              - arn:aws:apigateway:*::/vpclinks/*
+              - arn:aws:apigateway:*::/tags/*
+            Sid: "ApiGatewayWrite"
+          - Action:
+              - route53-recovery-control-config:ListControlPanels
+              - route53domains:ListDomains
+              - route53domains:ListOperations
+              - route53-recovery-readiness:ListReadinessChecks
+            Effect: Allow
+            Resource: "*"
+  TiDBCloudAutoDeployMonitoringPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: auto-deploy-cli-monitoring
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # Requested by o11y
+          - Action:
+              - cloudwatch:DescribeAlarms
+              - cloudwatch:ListTagsForResource
+            Effect: Allow
+            Resource:
+              - arn:aws:cloudwatch:*:*:alarm:WatchdogDown-*
+              - arn:aws:cloudwatch:*:*:alarm:AlertmanagerClusterFailedToSendAlerts-*
+            Sid: "CloudWatchReadOnly"
+          # Requested by o11y
+          - Action:
+              - cloudwatch:PutMetricAlarm
+            Effect: Allow
+            Resource:
+              - arn:aws:cloudwatch:*:*:alarm:WatchdogDown-*
+              - arn:aws:cloudwatch:*:*:alarm:AlertmanagerClusterFailedToSendAlerts-*
+            Sid: "CloudWatchWrite"
           # Requested by sli, o11y
           - Action:
               - logs:CreateLogGroup
@@ -478,70 +551,13 @@ Resources:
             Effect: Allow
             Resource: "*"
             Sid: "LogsReadOnly"
-  TiDBCloudAutoDeployIntegrationsPolicy:
+  TiDBCloudAutoDeployKMSPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      ManagedPolicyName: auto-deploy-cli-integrations
+      ManagedPolicyName: auto-deploy-cli-kms
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          # Requested by sli
-          - Action:
-              - vpce:AllowMultiRegion
-            Effect: Allow
-            Resource: "*"
-          # Requested by sli
-          - Action:
-              - glue:CreateDatabase
-              - glue:DeleteDatabase
-              - glue:CreateTable
-              - glue:DeleteTable
-              - glue:GetTable
-              - glue:TagResource
-              - glue:GetDatabase
-              - glue:GetTags
-            Effect: Allow
-            Resource:
-              - arn:aws:glue:*:*:catalog
-              - arn:aws:glue:*:*:database/tidbcloud-*
-              - arn:aws:glue:*:*:table/tidbcloud-*
-              - arn:aws:glue:*:*:userDefinedFunction/tidbcloud-*/*
-          - Action:
-              - apigateway:GET
-              - apigateway:POST
-              - apigateway:PUT
-              - apigateway:DELETE
-              - apigateway:TagResource
-            Effect: Allow
-            Resource:
-              - arn:aws:apigateway:*::/restapis
-              - arn:aws:apigateway:*::/restapis/*
-              - arn:aws:apigateway:*::/vpclinks
-              - arn:aws:apigateway:*::/vpclinks/*
-              - arn:aws:apigateway:*::/tags/*
-            Sid: "ApiGatewayWrite"
-          # Requested by sli
-          - Action:
-              - firehose:CreateDeliveryStream
-              - firehose:DeleteDeliveryStream
-              - firehose:TagDeliveryStream
-            Effect: Allow
-            Resource:
-              - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
-          # Requested by sli
-          - Action:
-              - firehose:ListTagsForDeliveryStream
-              - firehose:DescribeDeliveryStream
-            Effect: Allow
-            Resource:
-              - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
-          - Action:
-              - route53-recovery-control-config:ListControlPanels
-              - route53domains:ListDomains
-              - route53domains:ListOperations
-              - route53-recovery-readiness:ListReadinessChecks
-            Effect: Allow
-            Resource: "*"
           - Action:
               - kms:CreateKey
               - kms:CreateAlias

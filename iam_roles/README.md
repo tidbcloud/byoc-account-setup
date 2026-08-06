@@ -126,26 +126,28 @@ bash tidbcloud-byoc-update.sh --stack all
 
 ### Auto-deploy managed policies
 
-The deploy stack attaches four customer-managed policies to `auto-deploy-cli` instead of maintaining its permissions in one inline policy. This avoids the IAM inline-policy size limit while preserving the role's existing permissions. The policies are created before CloudFormation updates the role to reference them, so existing deployments can use the normal command:
+The deploy stack attaches six customer-managed policies to `auto-deploy-cli` instead of maintaining its permissions in one inline policy. This avoids the IAM inline-policy size limit while preserving the role's existing permissions. The policies are created before CloudFormation updates the role to reference them, so existing deployments can use the normal command:
 
 ```bash
 bash tidbcloud-byoc-update.sh --stack deploy
 ```
 
-The managed policy names are `auto-deploy-cli-control-plane`, `auto-deploy-cli-compute`, `auto-deploy-cli-observability`, and `auto-deploy-cli-integrations`.
+The managed policy names are `auto-deploy-cli-iam`, `auto-deploy-cli-compute`, `auto-deploy-cli-storage`, `auto-deploy-cli-network`, `auto-deploy-cli-monitoring`, and `auto-deploy-cli-kms`.
 
 #### Policy division principles
 
-When adding a permission, select the policy by the BYOC workflow that requires it rather than by the AWS action name alone:
+When adding a permission, select the policy by the AWS service family that owns the action:
 
 | Policy | Responsibility | Examples |
 |---|---|---|
-| `auto-deploy-cli-control-plane` | Identity and deployment orchestration | IAM, OIDC, service-linked roles, CloudFormation, ELB reads |
-| `auto-deploy-cli-compute` | O11Y compute and networking infrastructure | EC2, Auto Scaling, EKS |
-| `auto-deploy-cli-observability` | O11Y service resources | S3, Route 53, CloudWatch, ACM, WAF, CloudWatch Logs |
-| `auto-deploy-cli-integrations` | SLI delivery and supporting service integrations | VPC endpoints, Glue, API Gateway, Firehose, Route 53 recovery services, KMS |
+| `auto-deploy-cli-iam` | Identity and role management | IAM, OIDC, service-linked roles |
+| `auto-deploy-cli-compute` | Infrastructure provisioning and compute | CloudFormation, EC2, Auto Scaling, EKS, ELB |
+| `auto-deploy-cli-storage` | Storage and data delivery | S3, Glue, Firehose |
+| `auto-deploy-cli-network` | Network, DNS, and edge services | Route 53 and recovery services, VPC endpoints, API Gateway, ACM, WAF |
+| `auto-deploy-cli-monitoring` | Monitoring and log delivery | CloudWatch, CloudWatch Logs |
+| `auto-deploy-cli-kms` | Key management | KMS |
 
-First identify the workflow that needs the permission, then add the complete statement to that policy. If one statement spans multiple workflows, split it into separate statements and place each statement with its owning workflow. Do not use a catch-all policy for unrelated permissions.
+Select the policy from the action prefix. If a statement includes actions from unrelated service families, split it into separate statements and place each statement with its service family. Do not use a catch-all policy for unrelated permissions.
 
 ### Adding multi-region support to an existing deployment
 
@@ -263,10 +265,12 @@ For environments that cannot use the AWS managed policies listed above, attach a
       ],
       "Resource": [
         "arn:aws:iam::<ACCOUNT_ID>:role/auto-deploy-cli",
-        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-control-plane",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-iam",
         "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-compute",
-        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-observability",
-        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-integrations"
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-storage",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-network",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-monitoring",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-kms"
       ]
     },
     {
