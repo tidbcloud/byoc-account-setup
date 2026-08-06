@@ -134,6 +134,19 @@ bash tidbcloud-byoc-update.sh --stack deploy
 
 The managed policy names are `auto-deploy-cli-control-plane`, `auto-deploy-cli-compute`, `auto-deploy-cli-observability`, and `auto-deploy-cli-integrations`.
 
+#### Policy division principles
+
+When adding a permission, select the policy by the BYOC workflow that requires it rather than by the AWS action name alone:
+
+| Policy | Responsibility | Examples |
+|---|---|---|
+| `auto-deploy-cli-control-plane` | Identity and deployment orchestration | IAM, OIDC, service-linked roles, CloudFormation, ELB reads |
+| `auto-deploy-cli-compute` | O11Y compute and networking infrastructure | EC2, Auto Scaling, EKS |
+| `auto-deploy-cli-observability` | O11Y service resources | S3, Route 53, CloudWatch, ACM, WAF, CloudWatch Logs |
+| `auto-deploy-cli-integrations` | SLI delivery and supporting service integrations | VPC endpoints, Glue, API Gateway, Firehose, Route 53 recovery services, KMS |
+
+First identify the workflow that needs the permission, then add the complete statement to that policy. If one statement spans multiple workflows, split it into separate statements and place each statement with its owning workflow. Do not use a catch-all policy for unrelated permissions.
+
 ### Adding multi-region support to an existing deployment
 
 Existing single-region deployments can be extended to cover additional regions without re-creating any IAM roles. The new multi-region parameters default to empty, so a plain `--stack all` update is safe and causes no functional change.
