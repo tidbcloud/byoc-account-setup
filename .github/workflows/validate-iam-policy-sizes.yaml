@@ -1,0 +1,28 @@
+name: Validate IAM policy sizes
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/validate-iam-policy-sizes.yaml
+      - iam_roles/tidbcloud-byoc-setup-deploy.yaml
+      - iam_roles/validate_iam_policy_sizes.py
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install checker dependency
+        run: python -m pip install --disable-pip-version-check PyYAML
+      - name: Validate default policy sizes
+        run: python iam_roles/validate_iam_policy_sizes.py iam_roles/tidbcloud-byoc-setup-deploy.yaml
+      - name: Validate additional hosted zone policy sizes
+        run: >-
+          python iam_roles/validate_iam_policy_sizes.py iam_roles/tidbcloud-byoc-setup-deploy.yaml
+          --parameter 'AdditionalO11yHostedZoneIds=arn:aws:route53:::hostedzone/Z111AAA,arn:aws:route53:::hostedzone/Z222BBB'
