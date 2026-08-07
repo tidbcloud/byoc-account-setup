@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Validate IAM policy document sizes in a CloudFormation template.
+"""Validate IAM policy document sizes in the CloudFormation templates.
 
 The IAM size limits exclude whitespace. This tool renders CloudFormation
 intrinsics with representative parameter values, then measures compact JSON
-for every inline and customer-managed policy in the template.
+for every inline and customer-managed policy in each template.
 """
 
 import argparse
@@ -89,12 +89,24 @@ def render(value, parameters, conditions):
             selected = true_value if conditions[condition] else false_value
             return render(selected, parameters, conditions)
         if name == "Fn::Sub":
-            template = argument if isinstance(argument, str) else argument[0]
+            if isinstance(argument, str):
+                body, scope = argument, parameters
+            else:
+                body = argument[0]
+                scope = {**parameters, **render(argument[1], parameters, conditions)}
 
             def replacement(match):
-                return str(parameters[match.group(1)])
+                key = match.group(1)
+                if key in scope:
+                    return str(scope[key])
+                # A pseudo parameter that is not in scope is a typo; anything
+                # else is a resource reference, which the Ref branch above also
+                # treats as irrelevant to the document size being measured.
+                if key.startswith("AWS::"):
+                    raise KeyError(f"unsupported pseudo parameter {key!r} in Fn::Sub {body!r}")
+                return f"resource:{key}"
 
-            return re.sub(r"\$\{([^}]+)\}", replacement, template)
+            return re.sub(r"\$\{([^}]+)\}", replacement, body)
 
     return {
         key: rendered
@@ -107,14 +119,39 @@ def document_size(document):
     return len(json.dumps(document, separators=(",", ":"), ensure_ascii=True))
 
 
+def check_template(path, template, overrides):
+    parameters = parameter_values(template, overrides)
+    conditions = {
+        name: render(expression, parameters, {})
+        for name, expression in template.get("Conditions", {}).items()
+    }
+
+    failures = []
+    print(f"{path}:")
+    for logical_id, resource in template.get("Resources", {}).items():
+        properties = render(resource.get("Properties", {}), parameters, conditions)
+        if resource.get("Type") == "AWS::IAM::ManagedPolicy":
+            size = document_size(properties["PolicyDocument"])
+            print(f"  {logical_id}: managed policy {size}/{MANAGED_POLICY_LIMIT} characters")
+            if size > MANAGED_POLICY_LIMIT:
+                failures.append(f"{path}: {logical_id} exceeds the managed-policy limit")
+        elif resource.get("Type") == "AWS::IAM::Role":
+            policies = properties.get("Policies", [])
+            total = sum(document_size(policy["PolicyDocument"]) for policy in policies)
+            if policies:
+                print(f"  {logical_id}: inline policies {total}/{INLINE_POLICY_LIMIT} characters")
+            if total > INLINE_POLICY_LIMIT:
+                failures.append(f"{path}: {logical_id} exceeds the inline-policy aggregate limit")
+    return failures
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "template",
-        nargs="?",
-        default="tidbcloud-byoc-setup-deploy.yaml",
+        "templates",
+        nargs="*",
         type=Path,
-        help="CloudFormation template to inspect",
+        help="CloudFormation templates to inspect (defaults to every template beside this script)",
     )
     parser.add_argument(
         "--parameter",
@@ -125,34 +162,28 @@ def main():
     )
     args = parser.parse_args()
 
-    template = yaml.load(args.template.read_text(), Loader=CloudFormationLoader)
+    templates = args.templates or sorted(Path(__file__).resolve().parent.glob("*.yaml"))
+    if not templates:
+        parser.error("no templates to inspect")
+
     overrides = {}
     for parameter in args.parameter:
         name, separator, value = parameter.partition("=")
         if not separator or not name:
             parser.error(f"invalid parameter override: {parameter!r}")
         overrides[name] = value
-    parameters = parameter_values(template, overrides)
-    conditions = {
-        name: render(expression, parameters, {})
-        for name, expression in template.get("Conditions", {}).items()
-    }
+
+    loaded = [(path, yaml.load(path.read_text(), Loader=CloudFormationLoader)) for path in templates]
+    # A misspelled override would otherwise be ignored, leaving the run passing
+    # without ever measuring the case it was meant to cover.
+    declared = {name for _, template in loaded for name in template.get("Parameters", {})}
+    unknown = sorted(set(overrides) - declared)
+    if unknown:
+        parser.error(f"no inspected template declares parameter(s): {', '.join(unknown)}")
 
     failures = []
-    for logical_id, resource in template.get("Resources", {}).items():
-        properties = render(resource.get("Properties", {}), parameters, conditions)
-        if resource.get("Type") == "AWS::IAM::ManagedPolicy":
-            size = document_size(properties["PolicyDocument"])
-            print(f"{logical_id}: managed policy {size}/{MANAGED_POLICY_LIMIT} characters")
-            if size > MANAGED_POLICY_LIMIT:
-                failures.append(f"{logical_id} exceeds the managed-policy limit")
-        elif resource.get("Type") == "AWS::IAM::Role":
-            policies = properties.get("Policies", [])
-            total = sum(document_size(policy["PolicyDocument"]) for policy in policies)
-            if policies:
-                print(f"{logical_id}: inline policies {total}/{INLINE_POLICY_LIMIT} characters")
-            if total > INLINE_POLICY_LIMIT:
-                failures.append(f"{logical_id} exceeds the inline-policy aggregate limit")
+    for path, template in loaded:
+        failures.extend(check_template(path, template, overrides))
 
     if failures:
         print("ERROR: " + "; ".join(failures), file=sys.stderr)

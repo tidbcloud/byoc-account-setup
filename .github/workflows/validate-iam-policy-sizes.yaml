@@ -1,11 +1,13 @@
 name: Validate IAM policy sizes
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     paths:
       - .github/workflows/validate-iam-policy-sizes.yaml
-      - iam_roles/tidbcloud-byoc-setup-deploy.yaml
-      - iam_roles/validate_iam_policy_sizes.py
+      - iam_roles/**
 
 permissions:
   contents: read
@@ -19,10 +21,19 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install checker dependency
-        run: python -m pip install --disable-pip-version-check PyYAML
+        run: python -m pip install --disable-pip-version-check 'PyYAML==6.0.2'
+      # With no template arguments the checker inspects every template in
+      # iam_roles/, so a newly added template is covered without touching this
+      # workflow. The runs below re-measure the parameters that grow a policy.
       - name: Validate default policy sizes
-        run: python iam_roles/validate_iam_policy_sizes.py iam_roles/tidbcloud-byoc-setup-deploy.yaml
-      - name: Validate additional hosted zone policy sizes
+        run: python iam_roles/validate_iam_policy_sizes.py
+      - name: Validate multi-region policy sizes
         run: >-
-          python iam_roles/validate_iam_policy_sizes.py iam_roles/tidbcloud-byoc-setup-deploy.yaml
+          python iam_roles/validate_iam_policy_sizes.py
           --parameter 'AdditionalO11yHostedZoneIds=arn:aws:route53:::hostedzone/Z111AAA,arn:aws:route53:::hostedzone/Z222BBB'
+          --parameter 'AdditionalHostedZoneIds=arn:aws:route53:::hostedzone/Z111AAA,arn:aws:route53:::hostedzone/Z222BBB'
+          --parameter 'AdditionalPCAArns=arn:aws:acm-pca:us-west-2:227896186585:certificate-authority/4d4bd82b-069c-4d49-891c-5daaf8f52820,arn:aws:acm-pca:eu-west-1:227896186585:certificate-authority/5e5ce93c-17ad-5e5a-9a2d-6ebb9063a931'
+      - name: Validate optional node-role policy sizes
+        run: >-
+          python iam_roles/validate_iam_policy_sizes.py
+          --parameter 'EnableExternalDNSNodeRolePolicy=true'
