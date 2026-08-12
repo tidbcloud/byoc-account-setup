@@ -464,6 +464,7 @@ Resources:
           - Action:
               - apigateway:GET
               - apigateway:POST
+              - apigateway:PATCH
               - apigateway:PUT
               - apigateway:DELETE
               - apigateway:TagResource
@@ -501,6 +502,7 @@ Resources:
           # Requested by o11y
           - Action:
               - cloudwatch:PutMetricAlarm
+              - cloudwatch:TagResource
             Effect: Allow
             Resource:
               - arn:aws:cloudwatch:*:*:alarm:WatchdogDown-*
@@ -514,7 +516,9 @@ Resources:
               - logs:TagResource
             Effect: Allow
             Resource:
+              - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster
               - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster:*
+              - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*
               - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*:*
             Sid: "losWrite"
           - Action:
