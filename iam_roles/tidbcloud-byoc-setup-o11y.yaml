@@ -42,11 +42,21 @@ Resources:
             Statement:
               - Action:
                   - ec2:CreateVpcEndpointServiceConfiguration
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/ManagedBy: PingCAP
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:ec2:*:${AWS::AccountId}:vpc-endpoint-service/*
+              - Action:
                   - ec2:CreateRoute
                   - ec2:DeleteRoute
                   - ec2:ModifyVpcEndpointServicePermissions
                   - ec2:ModifyVpcEndpointServiceConfiguration
                   - ec2:DeleteVpcEndpointServiceConfigurations
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:ec2:*:${AWS::AccountId}:route-table/*
@@ -118,9 +128,22 @@ Resources:
                 Effect: Allow
               - Action:
                   - eks:CreateCluster
-                  - eks:TagResource
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/ManagedBy: PingCAP
+                Effect: Allow
+                Resource: "*"
+              - Action:
                   - eks:CreateNodegroup
                   - eks:CreateAddon
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/ManagedBy: PingCAP
+                    aws:ResourceTag/ManagedBy: PingCAP
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
+              - Action:
                   - eks:UpdateClusterVersion
                   - eks:UpdateClusterConfig
                   - eks:UpdateNodegroupConfig
@@ -129,7 +152,9 @@ Resources:
                   - eks:DeleteCluster
                   - eks:DeleteNodeGroup
                   - eks:DeleteAddon
-                  - eks:UntagResource
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
@@ -166,6 +191,14 @@ Resources:
                   - cognito-idp:DescribeUserPoolClient
                   - acm:ListCertificates
                   - acm:DescribeCertificate
+                  - waf-regional:GetWebACL
+                  - waf-regional:GetWebACLForResource
+                  - waf-regional:AssociateWebACL
+                  - waf-regional:DisassociateWebACL
+                  - wafv2:GetWebACL
+                  - wafv2:GetWebACLForResource
+                  - wafv2:AssociateWebACL
+                  - wafv2:DisassociateWebACL
                   - shield:GetSubscriptionState
                   - shield:DescribeProtection
                   - shield:CreateProtection
@@ -209,75 +242,103 @@ Resources:
               - Action:
                   - ec2:AuthorizeSecurityGroupIngress
                   - ec2:RevokeSecurityGroupIngress
+                Condition:
+                  StringLike:
+                    aws:ResourceTag/elbv2.k8s.aws/cluster: o11y-*
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource: "*"
               - Action:
                   - ec2:CreateSecurityGroup
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/ManagedBy: PingCAP
+                  StringLike:
+                    aws:RequestTag/elbv2.k8s.aws/cluster: o11y-*
+                Effect: Allow
+                Resource: arn:aws:ec2:*:*:security-group/*
+              - Action:
+                  - ec2:CreateSecurityGroup
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
+                Effect: Allow
+                Resource: arn:aws:ec2:*:*:vpc/*
+              - Action:
+                  - ec2:CreateTags
+                Condition:
+                  StringEquals:
+                    ec2:CreateAction: CreateSecurityGroup
+                    aws:RequestTag/ManagedBy: PingCAP
+                  StringLike:
+                    aws:RequestTag/elbv2.k8s.aws/cluster: o11y-*
+                Effect: Allow
+                Resource: arn:aws:ec2:*:*:security-group/*
+              - Action:
+                  - ec2:CreateTags
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
+                  StringEqualsIfExists:
+                    aws:RequestTag/ManagedBy: PingCAP
+                Effect: Allow
+                Resource: arn:aws:ec2:*:*:security-group/*
+              - Action:
+                  - ec2:DeleteTags
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
+                  ForAllValues:StringNotEquals:
+                    aws:TagKeys:
+                      - ManagedBy
+                Effect: Allow
+                Resource: arn:aws:ec2:*:*:security-group/*
+              - Action:
+                  - ec2:DeleteSecurityGroup
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
+                  StringLike:
+                    aws:ResourceTag/elbv2.k8s.aws/cluster: o11y-*
                 Effect: Allow
                 Resource: "*"
               - Action:
                   - ec2:CreateTags
+                  - elasticloadbalancing:AddTags
                 Condition:
-                  "Null":
-                    aws:RequestTag/elbv2.k8s.aws/cluster: "false"
                   StringEquals:
-                    ec2:CreateAction: CreateSecurityGroup
-                Effect: Allow
-                Resource: arn:aws:ec2:*:*:security-group/*
-              - Action:
-                  - ec2:CreateTags
-                  - ec2:DeleteTags
-                Condition:
-                  "Null":
-                    aws:RequestTag/elbv2.k8s.aws/cluster: "true"
-                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
-                Effect: Allow
-                Resource: arn:aws:ec2:*:*:security-group/*
-              - Action:
-                  - ec2:AuthorizeSecurityGroupIngress
-                  - ec2:RevokeSecurityGroupIngress
-                  - ec2:DeleteSecurityGroup
-                Condition:
-                  "Null":
-                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
+                    aws:RequestTag/ManagedBy: PingCAP
+                  StringLike:
+                    aws:ResourceTag/elbv2.k8s.aws/cluster: o11y-*
                 Effect: Allow
                 Resource: "*"
               - Action:
                   - elasticloadbalancing:CreateLoadBalancer
                   - elasticloadbalancing:CreateTargetGroup
                 Condition:
+                  StringEquals:
+                    aws:RequestTag/ManagedBy: PingCAP
                   "Null":
                     aws:RequestTag/elbv2.k8s.aws/cluster: "false"
                 Effect: Allow
                 Resource: "*"
               - Action:
                   - elasticloadbalancing:CreateListener
-                  - elasticloadbalancing:DeleteListener
                   - elasticloadbalancing:CreateRule
-                  - elasticloadbalancing:DeleteRule
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource: "*"
               - Action:
                   - elasticloadbalancing:AddTags
                   - elasticloadbalancing:RemoveTags
                 Condition:
-                  "Null":
-                    aws:RequestTag/elbv2.k8s.aws/cluster: "true"
-                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
-                Resource:
-                  - arn:aws:elasticloadbalancing:*:*:targetgroup/*/*
-                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*
-                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*
-              - Action:
-                  - elasticloadbalancing:AddTags
-                  - elasticloadbalancing:RemoveTags
-                Effect: Allow
-                Resource:
-                  - arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*
-                  - arn:aws:elasticloadbalancing:*:*:listener/app/*/*/*
-                  - arn:aws:elasticloadbalancing:*:*:listener-rule/net/*/*/*
-                  - arn:aws:elasticloadbalancing:*:*:listener-rule/app/*/*/*
+                Resource: "*"
               - Action:
                   - elasticloadbalancing:ModifyLoadBalancerAttributes
                   - elasticloadbalancing:SetIpAddressType
@@ -287,36 +348,36 @@ Resources:
                   - elasticloadbalancing:ModifyTargetGroup
                   - elasticloadbalancing:ModifyTargetGroupAttributes
                   - elasticloadbalancing:DeleteTargetGroup
+                  - elasticloadbalancing:RegisterTargets
+                  - elasticloadbalancing:DeregisterTargets
+                  - elasticloadbalancing:DeleteListener
+                  - elasticloadbalancing:DeleteRule
+                  - elasticloadbalancing:ModifyListener
+                  - elasticloadbalancing:AddListenerCertificates
+                  - elasticloadbalancing:RemoveListenerCertificates
+                  - elasticloadbalancing:ModifyRule
+                  - elasticloadbalancing:SetRulePriorities
                 Condition:
-                  "Null":
-                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource: "*"
               - Action:
                   - elasticloadbalancing:AddTags
                 Condition:
                   StringEquals:
+                    aws:RequestTag/ManagedBy: PingCAP
                     elasticloadbalancing:CreateAction:
                       - CreateTargetGroup
                       - CreateLoadBalancer
+                      - CreateListener
+                      - CreateRule
                   "Null":
                     aws:RequestTag/elbv2.k8s.aws/cluster: "false"
                 Effect: Allow
-                Resource:
-                  - arn:aws:elasticloadbalancing:*:*:targetgroup/*/*
-                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*
-                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*
+                Resource: "*"
               - Action:
-                  - elasticloadbalancing:RegisterTargets
-                  - elasticloadbalancing:DeregisterTargets
-                Effect: Allow
-                Resource: arn:aws:elasticloadbalancing:*:*:targetgroup/*/*
-              - Action:
-                  - elasticloadbalancing:ModifyListener
-                  - elasticloadbalancing:AddListenerCertificates
-                  - elasticloadbalancing:RemoveListenerCertificates
-                  - elasticloadbalancing:ModifyRule
-                  - elasticloadbalancing:SetRulePriorities
+                  - elasticloadbalancing:SetWebAcl
                 Effect: Allow
                 Resource: "*"
         - PolicyName: ClusterAutoscalerPolicy
@@ -337,26 +398,9 @@ Resources:
                 Condition:
                   StringEquals:
                     aws:ResourceTag/k8s.io/cluster-autoscaler/enabled: "true"
+                    aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource: !Sub arn:aws:autoscaling:*:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/*
-        - PolicyName: EKSClusterBackupPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ec2:DescribeVolumes
-                  - ec2:DescribeSnapshots
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - ec2:CreateTags
-                  - ec2:CreateVolume
-                  - ec2:CreateSnapshot
-                  - ec2:DeleteSnapshot
-                Resource:
-                  - !Sub arn:aws:ec2:*:${AWS::AccountId}:volume/*
-                  - !Sub arn:aws:ec2:*::snapshot/*
         - PolicyName: DeadmanswitchPolicy
           PolicyDocument:
             Version: "2012-10-17"
