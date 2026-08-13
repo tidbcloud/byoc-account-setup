@@ -243,8 +243,6 @@ Resources:
                   - ec2:AuthorizeSecurityGroupIngress
                   - ec2:RevokeSecurityGroupIngress
                 Condition:
-                  StringLike:
-                    aws:ResourceTag/elbv2.k8s.aws/cluster: o11y-*
                   StringEquals:
                     aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
@@ -329,14 +327,26 @@ Resources:
                 Condition:
                   StringEquals:
                     aws:RequestTag/ManagedBy: PingCAP
+                    aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource: "*"
               - Action:
                   - elasticloadbalancing:AddTags
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
+                  StringEqualsIfExists:
+                    aws:RequestTag/ManagedBy: PingCAP
+                Effect: Allow
+                Resource: "*"
+              - Action:
                   - elasticloadbalancing:RemoveTags
                 Condition:
                   StringEquals:
                     aws:ResourceTag/ManagedBy: PingCAP
+                  ForAllValues:StringNotEquals:
+                    aws:TagKeys:
+                      - ManagedBy
                 Effect: Allow
                 Resource: "*"
               - Action:
@@ -401,6 +411,19 @@ Resources:
                     aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource: !Sub arn:aws:autoscaling:*:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/*
+        - PolicyName: EKSClusterBackupPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeSnapshots
+                  - ec2:CreateTags
+                  - ec2:CreateVolume
+                  - ec2:CreateSnapshot
+                  - ec2:DeleteSnapshot
+                Resource: "*"
         - PolicyName: DeadmanswitchPolicy
           PolicyDocument:
             Version: "2012-10-17"
