@@ -375,11 +375,6 @@ Resources:
               - firehose:CreateDeliveryStream
               - firehose:DeleteDeliveryStream
               - firehose:TagDeliveryStream
-            Effect: Allow
-            Resource:
-              - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
-          # Requested by sli
-          - Action:
               - firehose:ListTagsForDeliveryStream
               - firehose:DescribeDeliveryStream
             Effect: Allow
@@ -414,7 +409,6 @@ Resources:
               - route53:ListHostedZonesByName
               - route53:ListResourceRecordSets
               - route53:ListTagsForResource
-              - route53:GetChange
             Effect: Allow
             Resource: "*"
             Sid: "Route53ReadOnly"
@@ -458,6 +452,10 @@ Resources:
           # Requested by sli
           - Action:
               - vpce:AllowMultiRegion
+              - route53-recovery-control-config:ListControlPanels
+              - route53domains:ListDomains
+              - route53domains:ListOperations
+              - route53-recovery-readiness:ListReadinessChecks
             Effect: Allow
             Resource: "*"
           # Requested by sli
@@ -476,13 +474,6 @@ Resources:
               - arn:aws:apigateway:*::/vpclinks/*
               - arn:aws:apigateway:*::/tags/*
             Sid: "ApiGatewayWrite"
-          - Action:
-              - route53-recovery-control-config:ListControlPanels
-              - route53domains:ListDomains
-              - route53domains:ListOperations
-              - route53-recovery-readiness:ListReadinessChecks
-            Effect: Allow
-            Resource: "*"
   TiDBCloudAutoDeployMonitoringPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:

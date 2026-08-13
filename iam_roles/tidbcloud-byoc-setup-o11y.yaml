@@ -42,6 +42,7 @@ Resources:
             Statement:
               - Action:
                   - ec2:CreateVpcEndpointServiceConfiguration
+                  - eks:CreateCluster
                 Condition:
                   StringEquals:
                     aws:RequestTag/ManagedBy: PingCAP
@@ -124,13 +125,6 @@ Resources:
                   - "*"
                 Effect: Allow
               - Action:
-                  - eks:CreateCluster
-                Condition:
-                  StringEquals:
-                    aws:RequestTag/ManagedBy: PingCAP
-                Effect: Allow
-                Resource: "*"
-              - Action:
                   - eks:CreateNodegroup
                   - eks:CreateAddon
                 Condition:
@@ -200,16 +194,6 @@ Resources:
                   - shield:DescribeProtection
                   - shield:CreateProtection
                   - shield:DeleteProtection
-                Effect: Allow
-                Resource: "*"
-              - Action:
-                  - iam:CreateServiceLinkedRole
-                Condition:
-                  StringEquals:
-                    iam:AWSServiceName: elasticloadbalancing.amazonaws.com
-                Effect: Allow
-                Resource: "*"
-              - Action:
                   - ec2:DescribeAccountAttributes
                   - ec2:DescribeAddresses
                   - ec2:DescribeAvailabilityZones
@@ -234,14 +218,14 @@ Resources:
                   - elasticloadbalancing:DescribeTargetGroupAttributes
                   - elasticloadbalancing:DescribeTargetHealth
                   - elasticloadbalancing:DescribeTags
+                  - elasticloadbalancing:SetWebAcl
                 Effect: Allow
                 Resource: "*"
               - Action:
-                  - ec2:AuthorizeSecurityGroupIngress
-                  - ec2:RevokeSecurityGroupIngress
+                  - iam:CreateServiceLinkedRole
                 Condition:
                   StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
+                    iam:AWSServiceName: elasticloadbalancing.amazonaws.com
                 Effect: Allow
                 Resource: "*"
               - Action:
@@ -347,6 +331,8 @@ Resources:
                 Effect: Allow
                 Resource: "*"
               - Action:
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:RevokeSecurityGroupIngress
                   - elasticloadbalancing:ModifyLoadBalancerAttributes
                   - elasticloadbalancing:SetIpAddressType
                   - elasticloadbalancing:SetSecurityGroups
@@ -381,10 +367,6 @@ Resources:
                       - CreateRule
                   "Null":
                     aws:RequestTag/elbv2.k8s.aws/cluster: "false"
-                Effect: Allow
-                Resource: "*"
-              - Action:
-                  - elasticloadbalancing:SetWebAcl
                 Effect: Allow
                 Resource: "*"
         - PolicyName: ClusterAutoscalerPolicy
