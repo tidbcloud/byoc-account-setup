@@ -1,0 +1,29 @@
+name: Validate IAM policy sizes
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - .github/workflows/validate-iam-policy-sizes.yaml
+      - iam_roles/**
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install checker dependency
+        run: python -m pip install --disable-pip-version-check 'PyYAML==6.0.2'
+      # With no template arguments the checker inspects every template in
+      # iam_roles/, so a newly added template is covered without touching this
+      # workflow.
+      - name: Validate default policy sizes
+        run: python iam_roles/validate_iam_policy_sizes.py

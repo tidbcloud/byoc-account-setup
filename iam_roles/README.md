@@ -124,6 +124,58 @@ bash tidbcloud-byoc-update.sh --stack all
 > `--stack` must be one of `deploy`, `dataplane`, `o11y`, or `all`
 > The script requires that the stack has already been created via `tidbcloud-byoc-setup.sh`
 
+### Auto-deploy managed policies
+
+The deploy stack attaches six customer-managed policies to `auto-deploy-cli` instead of maintaining its permissions in one inline policy. This avoids the IAM inline-policy size limit while preserving the role's existing permissions. The policies are created before CloudFormation updates the role to reference them, so existing deployments can use the normal command:
+
+```bash
+bash tidbcloud-byoc-update.sh --stack deploy
+```
+
+The managed policy names are `auto-deploy-cli-iam`, `auto-deploy-cli-compute`, `auto-deploy-cli-storage`, `auto-deploy-cli-network`, `auto-deploy-cli-monitoring`, and `auto-deploy-cli-kms`.
+
+#### Policy division principles
+
+When adding a permission, select the policy by the AWS service family that owns the action:
+
+| Policy | Responsibility | Examples |
+|---|---|---|
+| `auto-deploy-cli-iam` | Identity and role management | IAM, OIDC, service-linked roles |
+| `auto-deploy-cli-compute` | Infrastructure provisioning and compute | CloudFormation, EC2, Auto Scaling, EKS, ELB |
+| `auto-deploy-cli-storage` | Storage and data delivery | S3, Glue, Firehose |
+| `auto-deploy-cli-network` | Network, DNS, and edge services | Route 53 and recovery services, VPC endpoints, API Gateway, ACM, WAF |
+| `auto-deploy-cli-monitoring` | Monitoring and log delivery | CloudWatch, CloudWatch Logs |
+| `auto-deploy-cli-kms` | Key management | KMS |
+
+Select the policy from the action prefix. If a statement includes actions from unrelated service families, split it into separate statements and place each statement with its service family. Do not use a catch-all policy for unrelated permissions.
+
+#### Quotas that bound this layout
+
+Two IAM quotas apply, and the split trades one for the other:
+
+| Quota | Limit | Current usage |
+|---|---|---|
+| Managed policy document size | 6,144 characters per policy | six policies, largest around 60% full |
+| Managed policies attached to a role | 10 by default, 20 maximum | 6 of 10 slots on `auto-deploy-cli` |
+
+Splitting a policy relieves the size limit but consumes an attachment slot, so prefer adding a permission to the service family that already owns it over creating a seventh policy. Only add a policy once `validate_iam_policy_sizes.py` reports that an existing one is out of room, and note that going past 10 attached policies requires a Service Quotas increase in every customer account — a customer-visible prerequisite, not just a template change.
+
+#### Checking policy sizes
+
+`validate_iam_policy_sizes.py` measures every inline and customer-managed policy against these limits. With no arguments it inspects every template in this directory:
+
+```bash
+python iam_roles/validate_iam_policy_sizes.py
+```
+
+Pass `--parameter NAME=VALUE` to measure a parameter that grows a policy, such as a multi-region deployment:
+
+```bash
+python iam_roles/validate_iam_policy_sizes.py --parameter 'AdditionalO11yHostedZoneIds=arn:aws:route53:::hostedzone/Z111AAA'
+```
+
+The inline-policy limit is a 10,240-character budget shared by all of a role's inline policies, so the checker reports the aggregate per role rather than per policy. CI runs these checks on every change under `iam_roles/`.
+
 ### Adding multi-region support to an existing deployment
 
 Existing single-region deployments can be extended to cover additional regions without re-creating any IAM roles. The new multi-region parameters default to empty, so a plain `--stack all` update is safe and causes no functional change.
@@ -161,6 +213,8 @@ Once provided, these values are stored in the CloudFormation stack and replayed 
 ## Least-privilege permissions
 
 For environments that cannot use the AWS managed policies listed above, attach a policy like the following to the AWS principal running `tidbcloud-byoc-setup.sh`. Replace `<ACCOUNT_ID>` with your AWS account ID.
+
+`iam:AttachRolePolicy` and `iam:DetachRolePolicy` are kept in their own statement so that the `iam:PolicyARN` condition constrains which policies may be attached. The condition key is absent from the other IAM calls, so folding these two actions back into a statement that also grants `iam:CreateRole` would deny that statement outright.
 
 ```json
 {
@@ -201,8 +255,6 @@ For environments that cannot use the AWS managed policies listed above, attach a
         "iam:DeleteRolePolicy",
         "iam:GetRolePolicy",
         "iam:ListRolePolicies",
-        "iam:AttachRolePolicy",
-        "iam:DetachRolePolicy",
         "iam:ListAttachedRolePolicies",
         "iam:ListInstanceProfilesForRole"
       ],
@@ -220,6 +272,52 @@ For environments that cannot use the AWS managed policies listed above, attach a
         "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-eks-cluster-role",
         "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-eks-node-role",
         "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-apigw-role"
+      ]
+    },
+    {
+      "Sid": "AttachTiDBCloudRolePolicies",
+      "Effect": "Allow",
+      "Action": [
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::<ACCOUNT_ID>:role/auto-deploy-cli",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-eks-service-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-eks-node-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-eks-cluster-role",
+        "arn:aws:iam::<ACCOUNT_ID>:role/tidbcloud-o11y-eks-node-role"
+      ],
+      "Condition": {
+        "ArnLike": {
+          "iam:PolicyARN": [
+            "arn:aws:iam::aws:policy/*",
+            "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "ManageAutoDeployManagedPolicies",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreatePolicy",
+        "iam:DeletePolicy",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListPolicyVersions",
+        "iam:CreatePolicyVersion",
+        "iam:DeletePolicyVersion",
+        "iam:SetDefaultPolicyVersion",
+        "iam:ListEntitiesForPolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-iam",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-compute",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-storage",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-network",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-monitoring",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/auto-deploy-cli-kms"
       ]
     },
     {
