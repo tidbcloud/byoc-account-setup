@@ -761,12 +761,6 @@ Resources:
                     - route53:GetHostedZone
                   Resource: !Ref AdditionalHostedZoneIds
                 - !Ref AWS::NoValue
-              - Sid: Route53ForO11yPrivateLinkPrivateDNS
-                Effect: Allow
-                Action:
-                  - route53:AssociateVPCWithHostedZone
-                Resource:
-                  - arn:aws:route53:::hostedzone/*
               - Sid: Route53GetChange
                 Effect: Allow
                 Action:

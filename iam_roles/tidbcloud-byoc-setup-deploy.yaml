@@ -9,15 +9,6 @@ Parameters:
     Type: String
     Description: "The Google Account ID of the GitHub runner for PingCAP"
     Default: "114667344163696279999"
-  O11yHostedZoneId:
-    Type: String
-    Description: "The Route 53 hosted zone ID to manage DNS records for o11y"
-  AdditionalO11yHostedZoneIds:
-    Type: CommaDelimitedList
-    Default: ""
-    Description: "Additional o11y hosted zone IDs for multi-region deployments (comma-separated IDs, e.g. Z111AAA,Z222BBB)"
-Conditions:
-  HasAdditionalO11yZones: !Not [!Equals [!Join [",", !Ref AdditionalO11yHostedZoneIds], ""]]
 Resources:
   TiDBCloudSyncImageRole:
     Type: AWS::IAM::Role
@@ -399,32 +390,6 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          # Requested by o11y
-          - Action:
-              - route53:ChangeResourceRecordSets
-            Effect: Allow
-            Resource:
-              - !Sub arn:aws:route53:::hostedzone/${O11yHostedZoneId}
-            Sid: "Route53Write"
-          - !If
-            - HasAdditionalO11yZones
-            - Action:
-                - route53:ChangeResourceRecordSets
-              Effect: Allow
-              Resource: !Ref AdditionalO11yHostedZoneIds
-              Sid: "Route53WriteAdditional"
-            - !Ref AWS::NoValue
-          - Action:
-              - route53:GetHostedZone
-              - route53:GetChange
-              - route53:ListHostedZones
-              - route53:ListHostedZonesByName
-              - route53:ListResourceRecordSets
-              - route53:ListTagsForResource
-              - route53:GetChange
-            Effect: Allow
-            Resource: "*"
-            Sid: "Route53ReadOnly"
           # Requested by o11y
           - Action:
               - acm:RequestCertificate

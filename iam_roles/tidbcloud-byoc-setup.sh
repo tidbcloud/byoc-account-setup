@@ -9,15 +9,12 @@ Required:
   --control-plane-id <id>       The AWS account of TiDB Cloud control plane
   --clinic-id <id>              The AWS account of clinic service
   --tidb-hz-id <id>             The id of the hosted zone for TiDB
-  --o11y-hz-id <id>             The id of the hosted zone for O11Y
   --pca-arn <arn>               ARN of the private CA
 
 Optional:
   --additional-pca-arns <arns>       Comma-separated additional PCA ARNs for multi-region
                                      (full ARNs, e.g. arn:aws:acm-pca:us-east-1:ACCOUNT:certificate-authority/ID)
   --additional-tidb-hz-ids <ids>     Comma-separated additional TiDB hosted zone IDs for multi-region
-                                     (e.g. Z111AAA,Z222BBB)
-  --additional-o11y-hz-ids <ids>     Comma-separated additional o11y hosted zone IDs for multi-region
                                      (e.g. Z111AAA,Z222BBB)
   --o11y-global-role-arns <arns>     Comma-separated list of O11Y global role ARNs
                                      (default: arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw)
@@ -34,11 +31,9 @@ GithubRunnerGoogleAccountId="114667344163696279999"
 ControlPlaneAccountId=""
 ClinicAccountId=""
 TidbHostedZoneId=""
-O11yHostedZoneId=""
 TidbPCAArn=""
 AdditionalPCAArns=""
 AdditionalTidbHostedZoneIds=""
-AdditionalO11yHostedZoneIds=""
 
 require_arg() {
   if [[ $# -lt 2 || "${2-}" == -* ]]; then
@@ -71,9 +66,6 @@ while [[ $# -gt 0 ]]; do
     --tidb-hz-id)
       require_arg "$@"
       TidbHostedZoneId="$2"; shift 2 ;;
-    --o11y-hz-id)
-      require_arg "$@"
-      O11yHostedZoneId="$2"; shift 2 ;;
     --pca-arn)
       require_arg "$@"
       TidbPCAArn="$2"; shift 2 ;;
@@ -83,9 +75,6 @@ while [[ $# -gt 0 ]]; do
     --additional-tidb-hz-ids)
       require_arg "$@"
       AdditionalTidbHostedZoneIds="${2// /}"; shift 2 ;;
-    --additional-o11y-hz-ids)
-      require_arg "$@"
-      AdditionalO11yHostedZoneIds="${2// /}"; shift 2 ;;
     --o11y-global-role-arns)
       require_arg "$@"
       O11yGlobalRoleArns="$2"; shift 2 ;;
@@ -105,7 +94,6 @@ missing=()
 [[ -z "$ControlPlaneAccountId" ]] && missing+=("--control-plane-id")
 [[ -z "$ClinicAccountId" ]] && missing+=("--clinic-id")
 [[ -z "$TidbHostedZoneId" ]] && missing+=("--tidb-hz-id")
-[[ -z "$O11yHostedZoneId" ]] && missing+=("--o11y-hz-id")
 [[ -z "$TidbPCAArn" ]] && missing+=("--pca-arn")
 
 if [[ ${#missing[@]} -gt 0 ]]; then
@@ -114,19 +102,11 @@ if [[ ${#missing[@]} -gt 0 ]]; then
   usage
 fi
 
-deploy_overrides=""
-if [[ -n "$AdditionalO11yHostedZoneIds" ]]; then
-  deploy_overrides="AdditionalO11yHostedZoneIds=$(hz_ids_to_arns "$AdditionalO11yHostedZoneIds")"
-fi
-
-# shellcheck disable=SC2086
 aws cloudformation deploy \
   --stack-name tidbcloud-byoc-setup-deploy \
   --template-file ./tidbcloud-byoc-setup-deploy.yaml \
   --parameter-overrides ControlPlaneAccountId=$ControlPlaneAccountId \
                GithubRunnerGoogleAccountId=$GithubRunnerGoogleAccountId \
-               O11yHostedZoneId=$O11yHostedZoneId \
-               $deploy_overrides \
   --capabilities CAPABILITY_NAMED_IAM
 
 dataplane_overrides="ResourceNamePrefix=tidbcloud RequiredManagedByTagValue=PingCAP SLIBucketNamePrefix=tidbcloud-sli-data"
@@ -146,16 +126,8 @@ aws cloudformation deploy \
                $dataplane_overrides \
   --capabilities CAPABILITY_NAMED_IAM
 
-o11y_overrides=""
-if [[ -n "$AdditionalO11yHostedZoneIds" ]]; then
-  o11y_overrides="AdditionalO11yHostedZoneIds=$(hz_ids_to_arns "$AdditionalO11yHostedZoneIds")"
-fi
-
-# shellcheck disable=SC2086
 aws cloudformation deploy \
   --stack-name tidbcloud-byoc-setup-o11y \
   --template-file ./tidbcloud-byoc-setup-o11y.yaml \
-  --parameter-overrides O11yHostedZoneId=$O11yHostedZoneId \
-               O11yGlobalRoleArns=$O11yGlobalRoleArns \
-               $o11y_overrides \
+  --parameter-overrides O11yGlobalRoleArns=$O11yGlobalRoleArns \
   --capabilities CAPABILITY_NAMED_IAM
