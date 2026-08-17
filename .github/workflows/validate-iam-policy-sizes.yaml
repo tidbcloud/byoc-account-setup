@@ -32,7 +32,7 @@ jobs:
           python iam_roles/validate_iam_policy_sizes.py
           --parameter 'AdditionalO11yHostedZoneIds=arn:aws:route53:::hostedzone/Z111AAA,arn:aws:route53:::hostedzone/Z222BBB'
           --parameter 'AdditionalHostedZoneIds=arn:aws:route53:::hostedzone/Z111AAA,arn:aws:route53:::hostedzone/Z222BBB'
-          --parameter 'AdditionalPCAArns=arn:aws:acm-pca:us-west-2:227896186585:certificate-authority/4d4bd82b-069c-4d49-891c-5daaf8f52820,arn:aws:acm-pca:eu-west-1:227896186585:certificate-authority/5e5ce93c-17ad-5e5a-9a2d-6ebb9063a931'
+          --parameter 'AdditionalPCAArns=arn:aws:acm-pca:us-west-2:123456789012:certificate-authority/11111111-1111-1111-1111-111111111111,arn:aws:acm-pca:eu-west-1:123456789012:certificate-authority/22222222-2222-2222-2222-222222222222'
       - name: Validate optional node-role policy sizes
         run: >-
           python iam_roles/validate_iam_policy_sizes.py
