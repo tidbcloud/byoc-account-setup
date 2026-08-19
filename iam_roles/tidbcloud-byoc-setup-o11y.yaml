@@ -96,7 +96,9 @@ Resources:
                     s3:ResourceAccount: !Ref AWS::AccountId
                 Effect: Allow
                 Resource:
-                  - arn:aws:s3:::*o11y*/*
+                  - arn:aws:s3:::o11y-*-shared-*/*
+                  - arn:aws:s3:::loki-*-*-o11y/*
+                  - arn:aws:s3:::o11y-*-*-backups/*
               - Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies
@@ -127,10 +129,6 @@ Resources:
               - Action:
                   - eks:CreateNodegroup
                   - eks:CreateAddon
-                Condition:
-                  StringEquals:
-                    aws:RequestTag/ManagedBy: PingCAP
-                    aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
@@ -143,9 +141,27 @@ Resources:
                   - eks:DeleteCluster
                   - eks:DeleteNodeGroup
                   - eks:DeleteAddon
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*/*
+              - Action:
+                  - eks:TagResource
                 Condition:
-                  StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
+                  StringEqualsIfExists:
+                    aws:RequestTag/ManagedBy: PingCAP
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*/*
+              - Action:
+                  - eks:UntagResource
+                Condition:
+                  ForAllValues:StringNotEquals:
+                    aws:TagKeys:
+                      - ManagedBy
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
