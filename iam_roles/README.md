@@ -135,7 +135,7 @@ When adding a permission, select the policy by the AWS service family that owns 
 | `auto-deploy-cli-iam` | Identity and role management | IAM, OIDC, service-linked roles |
 | `auto-deploy-cli-compute` | Infrastructure provisioning and compute | CloudFormation, EC2, Auto Scaling, EKS, ELB |
 | `auto-deploy-cli-storage` | Storage and data delivery | S3, Glue, Firehose |
-| `auto-deploy-cli-network` | Network, DNS, and edge services | Route 53 and recovery services, VPC endpoints, API Gateway, ACM, WAF |
+| `auto-deploy-cli-network` | Network, DNS, and edge services | Route 53 and recovery services, VPC endpoints, API Gateway, ACM |
 | `auto-deploy-cli-monitoring` | Monitoring and log delivery | CloudWatch, CloudWatch Logs |
 | `auto-deploy-cli-kms` | Key management | KMS |
 

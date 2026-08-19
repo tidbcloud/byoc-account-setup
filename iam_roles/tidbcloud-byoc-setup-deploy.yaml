@@ -405,28 +405,6 @@ Resources:
             Effect: Allow
             Resource: "*"
             Sid: "ACMReadOnly"
-          # Requested by o11y
-          - Action:
-              - wafv2:CreateIPSet
-              - wafv2:DeleteIPSet
-              - wafv2:UpdateIPSet
-              - wafv2:CreateWebACL
-              - wafv2:DeleteWebACL
-              - wafv2:UpdateWebACL
-              - wafv2:AssociateWebACL
-              - wafv2:TagResource
-              - wafv2:UntagResource
-            Effect: Allow
-            Resource: "*"
-            Sid: "WAFWrite"
-          # Requested by o11y
-          - Action:
-              - wafv2:GetIPSet
-              - wafv2:GetWebACL
-              - wafv2:ListTagsForResource
-            Effect: Allow
-            Resource: "*"
-            Sid: "WAFReadOnly"
           # Requested by sli
           - Action:
               - vpce:AllowMultiRegion
