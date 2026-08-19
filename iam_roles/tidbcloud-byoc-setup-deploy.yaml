@@ -191,6 +191,19 @@ Resources:
             Effect: Allow
             Resource: "*"
             Sid: CloudFormationReadOnly
+          # Requested by o11y
+          - Action:
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:UpdateStack
+              - cloudformation:TagResource
+              - cloudformation:UntagResource
+              - cloudformation:CreateChangeSet
+              - cloudformation:ExecuteChangeSet
+              - cloudformation:DeleteChangeSet
+            Effect: Allow
+            Resource: arn:aws:cloudformation:*:*:stack/auto-deploy-o11y-*/*
+            Sid: CloudFormationWrite
           # Requested by o11y eks
           - Action:
               - ec2:RunInstances
@@ -234,6 +247,10 @@ Resources:
               - ec2:CreateVpcEndpoint
               - ec2:DeleteVpcEndpoints
               - ec2:ModifyVpcEndpoint
+              - ec2:CreateVpcEndpointServiceConfiguration
+              - ec2:DeleteVpcEndpointServiceConfigurations
+              - ec2:ModifyVpcEndpointServiceConfiguration
+              - ec2:ModifyVpcEndpointServicePermissions
             Effect: Allow
             Resource: "*"
             Sid: "EC2Write"
