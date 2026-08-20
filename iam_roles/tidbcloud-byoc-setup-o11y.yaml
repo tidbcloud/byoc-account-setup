@@ -74,7 +74,9 @@ Resources:
                   - s3:CreateBucket
                 Effect: Allow
                 Resource:
-                  - arn:aws:s3:::*o11y*
+                  - arn:aws:s3:::o11y-*-shared-*
+                  - arn:aws:s3:::loki-*-*-o11y
+                  - arn:aws:s3:::o11y-*-*-backups
               - Action:
                   - s3:ListBucket
                   - s3:GetLifecycleConfiguration
@@ -84,7 +86,9 @@ Resources:
                     s3:ResourceAccount: !Ref AWS::AccountId
                 Effect: Allow
                 Resource:
-                  - arn:aws:s3:::*o11y*
+                  - arn:aws:s3:::o11y-*-shared-*
+                  - arn:aws:s3:::loki-*-*-o11y
+                  - arn:aws:s3:::o11y-*-*-backups
               - Action:
                   - s3:GetObject
                   - s3:PutObject
