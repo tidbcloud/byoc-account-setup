@@ -246,8 +246,6 @@ Resources:
                 Condition:
                   StringEquals:
                     aws:RequestTag/ManagedBy: PingCAP
-                  StringLike:
-                    aws:RequestTag/elbv2.k8s.aws/cluster: o11y-*
                 Effect: Allow
                 Resource: arn:aws:ec2:*:*:security-group/*
               - Action:
@@ -263,8 +261,6 @@ Resources:
                   StringEquals:
                     ec2:CreateAction: CreateSecurityGroup
                     aws:RequestTag/ManagedBy: PingCAP
-                  StringLike:
-                    aws:RequestTag/elbv2.k8s.aws/cluster: o11y-*
                 Effect: Allow
                 Resource: arn:aws:ec2:*:*:security-group/*
               - Action:
