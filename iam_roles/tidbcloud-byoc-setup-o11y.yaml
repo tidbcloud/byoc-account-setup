@@ -139,11 +139,11 @@ Resources:
                   - eks:DeleteCluster
                   - eks:DeleteNodeGroup
                   - eks:DeleteAddon
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*
+                Resource: "*"
               - Action:
                   - eks:TagResource
                 Condition:
@@ -157,14 +157,13 @@ Resources:
               - Action:
                   - eks:UntagResource
                 Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
                   ForAllValues:StringNotEquals:
                     aws:TagKeys:
                       - ManagedBy
                 Effect: Allow
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*
+                Resource: "*"
         - PolicyName: ExternalDNSPolicy
           PolicyDocument:
             Version: "2012-10-17"
