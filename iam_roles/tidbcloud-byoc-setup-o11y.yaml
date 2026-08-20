@@ -231,7 +231,6 @@ Resources:
                   - elasticloadbalancing:DescribeTargetGroupAttributes
                   - elasticloadbalancing:DescribeTargetHealth
                   - elasticloadbalancing:DescribeTags
-                  - elasticloadbalancing:SetWebAcl
                 Effect: Allow
                 Resource: "*"
               - Action:
@@ -266,16 +265,15 @@ Resources:
               - Action:
                   - ec2:CreateTags
                 Condition:
-                  StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
                   StringEqualsIfExists:
+                    aws:ResourceTag/ManagedBy: PingCAP
                     aws:RequestTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource: arn:aws:ec2:*:*:security-group/*
               - Action:
                   - ec2:DeleteTags
                 Condition:
-                  StringEquals:
+                  StringEqualsIfExists:
                     aws:ResourceTag/ManagedBy: PingCAP
                   ForAllValues:StringNotEquals:
                     aws:TagKeys:
@@ -285,7 +283,7 @@ Resources:
               - Action:
                   - ec2:DeleteSecurityGroup
                 Condition:
-                  StringEquals:
+                  StringEqualsIfExists:
                     aws:ResourceTag/ManagedBy: PingCAP
                   StringLike:
                     aws:ResourceTag/elbv2.k8s.aws/cluster: o11y-*
@@ -317,22 +315,22 @@ Resources:
                 Condition:
                   StringEquals:
                     aws:RequestTag/ManagedBy: PingCAP
+                  StringEqualsIfExists:
                     aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource: "*"
               - Action:
                   - elasticloadbalancing:AddTags
                 Condition:
-                  StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
                   StringEqualsIfExists:
+                    aws:ResourceTag/ManagedBy: PingCAP
                     aws:RequestTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource: "*"
               - Action:
                   - elasticloadbalancing:RemoveTags
                 Condition:
-                  StringEquals:
+                  StringEqualsIfExists:
                     aws:ResourceTag/ManagedBy: PingCAP
                   ForAllValues:StringNotEquals:
                     aws:TagKeys:
@@ -358,9 +356,8 @@ Resources:
                   - elasticloadbalancing:AddListenerCertificates
                   - elasticloadbalancing:RemoveListenerCertificates
                   - elasticloadbalancing:ModifyRule
-                  - elasticloadbalancing:SetRulePriorities
                 Condition:
-                  StringEquals:
+                  StringEqualsIfExists:
                     aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource: "*"
@@ -372,10 +369,18 @@ Resources:
                     elasticloadbalancing:CreateAction:
                       - CreateTargetGroup
                       - CreateLoadBalancer
-                      - CreateListener
-                      - CreateRule
                   "Null":
                     aws:RequestTag/elbv2.k8s.aws/cluster: "false"
+                Effect: Allow
+                Resource: "*"
+              # SetRulePriorities and SetWebAcl do not support IAM tag-based
+              # condition keys (see AWS service authorization reference), so any
+              # aws:ResourceTag/ManagedBy condition on them would be silently
+              # ignored. Keep them unconditional, matching the official ALB
+              # controller policy.
+              - Action:
+                  - elasticloadbalancing:SetRulePriorities
+                  - elasticloadbalancing:SetWebAcl
                 Effect: Allow
                 Resource: "*"
         - PolicyName: ClusterAutoscalerPolicy
