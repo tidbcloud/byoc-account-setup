@@ -144,8 +144,8 @@ Resources:
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*/*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*
               - Action:
                   - eks:TagResource
                 Condition:
@@ -154,8 +154,8 @@ Resources:
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*/*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*
               - Action:
                   - eks:UntagResource
                 Condition:
@@ -165,8 +165,8 @@ Resources:
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*/*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*
         - PolicyName: ExternalDNSPolicy
           PolicyDocument:
             Version: "2012-10-17"
