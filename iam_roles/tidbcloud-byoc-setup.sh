@@ -21,7 +21,7 @@ Optional:
                                      (e.g. Z111AAA,Z222BBB)
   --o11y-global-role-arns <arns>     Comma-separated list of O11Y global role ARNs
                                      (default: arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw)
-  --github-runner-id <id>            Google account ID for GitHub runner
+  --github-runner-id <id>            Google account ID for GitHub runner image sync
                                      (default: 114667344163696279999)
   -h, --help                         Show this help message
 EOF
