@@ -79,13 +79,6 @@ Resources:
             Principal:
               AWS: !Sub arn:aws:iam::${ControlPlaneAccountId}:role/auto-deploy-cli
             Action: sts:AssumeRole
-          - Effect: Allow
-            Principal:
-              Federated: "accounts.google.com"
-            Action: sts:AssumeRoleWithWebIdentity
-            Condition:
-              StringEquals:
-                accounts.google.com:aud: !Sub ${GithubRunnerGoogleAccountId}
       ManagedPolicyArns:
         - !Ref TiDBCloudAutoDeployIdentityPolicy
         - !Ref TiDBCloudAutoDeployComputePolicy
