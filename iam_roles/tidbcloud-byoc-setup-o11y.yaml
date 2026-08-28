@@ -1,18 +1,9 @@
 Description: Create IAM roles for tidbcloud o11y
 Parameters:
-  O11yHostedZoneId:
-    Type: String
-    Description: "The Route 53 hosted zone ID to manage DNS records for o11y"
   O11yGlobalRoleArns:
     Type: CommaDelimitedList
     Default: "arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw"
     Description: "The ARNs of the O11Y global IAM roles that can assume the API Gateway role (comma-separated list)"
-  AdditionalO11yHostedZoneIds:
-    Type: CommaDelimitedList
-    Default: ""
-    Description: "Additional o11y hosted zone IDs for multi-region deployments (comma-separated IDs, e.g. Z111AAA,Z222BBB)"
-Conditions:
-  HasAdditionalO11yZones: !Not [!Equals [!Join [",", !Ref AdditionalO11yHostedZoneIds], ""]]
 Resources:
   # TiDBCloud O11y Control Plane Role
   #
@@ -149,17 +140,22 @@ Resources:
                   StringEquals:
                     aws:ResourceTag/ManagedBy: PingCAP
                 Effect: Allow
-                Resource: "*"
+                Resource:
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
               - Action:
                   - eks:TagResource
                 Condition:
-                  StringEqualsIfExists:
+                  StringEquals:
                     aws:RequestTag/ManagedBy: PingCAP
+                  ForAllValues:StringEquals:
+                    aws:TagKeys: ManagedBy
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
               - Action:
                   - eks:UntagResource
                 Condition:
@@ -169,30 +165,10 @@ Resources:
                     aws:TagKeys:
                       - ManagedBy
                 Effect: Allow
-                Resource: "*"
-        - PolicyName: ExternalDNSPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Action:
-                  - route53:ChangeResourceRecordSets
-                Effect: Allow
                 Resource:
-                  - !Sub arn:aws:route53:::hostedzone/${O11yHostedZoneId}
-              - !If
-                - HasAdditionalO11yZones
-                - Action:
-                    - route53:ChangeResourceRecordSets
-                  Effect: Allow
-                  Resource: !Ref AdditionalO11yHostedZoneIds
-                - !Ref AWS::NoValue
-              - Effect: Allow
-                Action:
-                  - route53:ListHostedZones
-                  - route53:ListResourceRecordSets
-                  - route53:ListTagsForResources
-                Resource:
-                  - "*"
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
         - PolicyName: AWSLoadBalancerPolicy
           PolicyDocument:
             Version: "2012-10-17"
