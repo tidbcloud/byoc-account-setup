@@ -65,6 +65,12 @@ Resources:
                   - ec2:DescribeVpcEndpointServices
                   - ec2:DescribeVpcEndpointServicePermissions
                   - ec2:DescribeVpcEndpointServiceConfigurations
+                  - eks:DescribeCluster
+                  - eks:ListClusters
+                  - eks:DescribeNodegroup
+                  - eks:ListNodegroups
+                  - eks:DescribeAddon
+                  - eks:ListAddons
                   - sts:GetCallerIdentity
                   - ec2:DescribeLaunchTemplateVersions
                   - ecr:GetAuthorizationToken
