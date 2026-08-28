@@ -9,15 +9,6 @@ Parameters:
     Type: String
     Description: "The Google Account ID of the GitHub runner for PingCAP"
     Default: "114667344163696279999"
-  O11yHostedZoneId:
-    Type: String
-    Description: "The Route 53 hosted zone ID to manage DNS records for o11y"
-  AdditionalO11yHostedZoneIds:
-    Type: CommaDelimitedList
-    Default: ""
-    Description: "Additional o11y hosted zone IDs for multi-region deployments (comma-separated IDs, e.g. Z111AAA,Z222BBB)"
-Conditions:
-  HasAdditionalO11yZones: !Not [!Equals [!Join [",", !Ref AdditionalO11yHostedZoneIds], ""]]
 Resources:
   TiDBCloudSyncImageRole:
     Type: AWS::IAM::Role
@@ -375,6 +366,11 @@ Resources:
               - firehose:CreateDeliveryStream
               - firehose:DeleteDeliveryStream
               - firehose:TagDeliveryStream
+            Effect: Allow
+            Resource:
+              - arn:aws:firehose:*:*:deliverystream/tidbcloud-*
+          # Requested by sli
+          - Action:
               - firehose:ListTagsForDeliveryStream
               - firehose:DescribeDeliveryStream
             Effect: Allow
@@ -387,31 +383,6 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          # Requested by o11y
-          - Action:
-              - route53:ChangeResourceRecordSets
-            Effect: Allow
-            Resource:
-              - !Sub arn:aws:route53:::hostedzone/${O11yHostedZoneId}
-            Sid: "Route53Write"
-          - !If
-            - HasAdditionalO11yZones
-            - Action:
-                - route53:ChangeResourceRecordSets
-              Effect: Allow
-              Resource: !Ref AdditionalO11yHostedZoneIds
-              Sid: "Route53WriteAdditional"
-            - !Ref AWS::NoValue
-          - Action:
-              - route53:GetHostedZone
-              - route53:GetChange
-              - route53:ListHostedZones
-              - route53:ListHostedZonesByName
-              - route53:ListResourceRecordSets
-              - route53:ListTagsForResource
-            Effect: Allow
-            Resource: "*"
-            Sid: "Route53ReadOnly"
           # Requested by o11y
           - Action:
               - acm:RequestCertificate
@@ -427,42 +398,15 @@ Resources:
             Effect: Allow
             Resource: "*"
             Sid: "ACMReadOnly"
-          # Requested by o11y
-          - Action:
-              - wafv2:CreateIPSet
-              - wafv2:DeleteIPSet
-              - wafv2:UpdateIPSet
-              - wafv2:CreateWebACL
-              - wafv2:DeleteWebACL
-              - wafv2:UpdateWebACL
-              - wafv2:AssociateWebACL
-              - wafv2:TagResource
-              - wafv2:UntagResource
-            Effect: Allow
-            Resource: "*"
-            Sid: "WAFWrite"
-          # Requested by o11y
-          - Action:
-              - wafv2:GetIPSet
-              - wafv2:GetWebACL
-              - wafv2:ListTagsForResource
-            Effect: Allow
-            Resource: "*"
-            Sid: "WAFReadOnly"
           # Requested by sli
           - Action:
               - vpce:AllowMultiRegion
-              - route53-recovery-control-config:ListControlPanels
-              - route53domains:ListDomains
-              - route53domains:ListOperations
-              - route53-recovery-readiness:ListReadinessChecks
             Effect: Allow
             Resource: "*"
           # Requested by sli
           - Action:
               - apigateway:GET
               - apigateway:POST
-              - apigateway:PATCH
               - apigateway:PUT
               - apigateway:DELETE
               - apigateway:TagResource
@@ -474,6 +418,13 @@ Resources:
               - arn:aws:apigateway:*::/vpclinks/*
               - arn:aws:apigateway:*::/tags/*
             Sid: "ApiGatewayWrite"
+          - Action:
+              - route53-recovery-control-config:ListControlPanels
+              - route53domains:ListDomains
+              - route53domains:ListOperations
+              - route53-recovery-readiness:ListReadinessChecks
+            Effect: Allow
+            Resource: "*"
   TiDBCloudAutoDeployMonitoringPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -493,7 +444,6 @@ Resources:
           # Requested by o11y
           - Action:
               - cloudwatch:PutMetricAlarm
-              - cloudwatch:TagResource
             Effect: Allow
             Resource:
               - arn:aws:cloudwatch:*:*:alarm:WatchdogDown-*
@@ -507,9 +457,7 @@ Resources:
               - logs:TagResource
             Effect: Allow
             Resource:
-              - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster
               - arn:aws:logs:*:*:log-group:/aws/eks/o11y-*/cluster:*
-              - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*
               - arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/tidbcloud-*:*
             Sid: "losWrite"
           - Action:
