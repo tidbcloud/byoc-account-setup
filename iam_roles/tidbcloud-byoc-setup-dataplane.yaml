@@ -678,6 +678,16 @@ Resources:
                     "aws:ResourceTag/elbv2.k8s.aws/cluster": "o11y-*"
                   StringEquals:
                     "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Sid: EC2BackfillManagedByTagOnO11yShootResources
+                Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                Resource: "*"
+                Condition:
+                  StringLike:
+                    "aws:ResourceTag/tidbcloud-auto-deploy-owner": "o11y-*"
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
               - Sid: EC2CreateTagsOnTaggedResources
                 Effect: Allow
                 Action:

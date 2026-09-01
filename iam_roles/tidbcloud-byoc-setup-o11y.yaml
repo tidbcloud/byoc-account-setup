@@ -278,10 +278,9 @@ Resources:
                   - elasticloadbalancing:AddTags
                   - elasticloadbalancing:RemoveTags
                 Condition:
-                  StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
-                  StringEqualsIfExists:
-                    aws:RequestTag/ManagedBy: PingCAP
+                  "Null":
+                    aws:RequestTag/elbv2.k8s.aws/cluster: "true"
+                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
                 Effect: Allow
                 Resource:
                   - arn:aws:elasticloadbalancing:*:*:targetgroup/*/*
@@ -291,10 +290,9 @@ Resources:
                   - elasticloadbalancing:AddTags
                   - elasticloadbalancing:RemoveTags
                 Condition:
-                  StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
-                  StringEqualsIfExists:
-                    aws:RequestTag/ManagedBy: PingCAP
+                  "Null":
+                    aws:RequestTag/elbv2.k8s.aws/cluster: "true"
+                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
                 Effect: Allow
                 Resource:
                   - arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*
