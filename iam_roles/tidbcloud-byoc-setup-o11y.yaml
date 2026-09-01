@@ -149,8 +149,6 @@ Resources:
                 Condition:
                   StringEquals:
                     aws:RequestTag/ManagedBy: PingCAP
-                  ForAllValues:StringEquals:
-                    aws:TagKeys: ManagedBy
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
@@ -279,6 +277,11 @@ Resources:
               - Action:
                   - elasticloadbalancing:AddTags
                   - elasticloadbalancing:RemoveTags
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
+                  StringEqualsIfExists:
+                    aws:RequestTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource:
                   - arn:aws:elasticloadbalancing:*:*:targetgroup/*/*
@@ -287,6 +290,11 @@ Resources:
               - Action:
                   - elasticloadbalancing:AddTags
                   - elasticloadbalancing:RemoveTags
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: PingCAP
+                  StringEqualsIfExists:
+                    aws:RequestTag/ManagedBy: PingCAP
                 Effect: Allow
                 Resource:
                   - arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*
