@@ -4,6 +4,10 @@ Parameters:
     Type: CommaDelimitedList
     Default: "arn:aws:iam::557537366020:role/globalserver-role-780c8f0,arn:aws:iam::380838443567:role/tidbcloud-global-apigw"
     Description: "The ARNs of the O11Y global IAM roles that can assume the API Gateway role (comma-separated list)"
+  RequiredManagedByTagValue:
+    Type: String
+    Default: "PingCAP"
+    Description: "Required value for the ManagedBy tag on O11Y resources"
 Resources:
   # TiDBCloud O11y Control Plane Role
   #
@@ -36,7 +40,7 @@ Resources:
                   - eks:CreateCluster
                 Condition:
                   StringEquals:
-                    aws:RequestTag/ManagedBy: PingCAP
+                    aws:RequestTag/ManagedBy: !Ref RequiredManagedByTagValue
                 Effect: Allow
                 Resource: "*"
               - Action:
@@ -47,9 +51,51 @@ Resources:
                   - ec2:DeleteVpcEndpointServiceConfigurations
                 Condition:
                   StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
+                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
                 Effect: Allow
                 Resource: "*"
+              - Sid: EC2CreateTagsOnCreateWithRequiredTag
+                Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+                    "ec2:CreateAction":
+                      - CreateVpc
+                      - AllocateAddress
+                      - CreateNatGateway
+                      - CreateInternetGateway
+                      - CreateSubnet
+                      - CreateRouteTable
+                      - CreateSecurityGroup
+                      - CreateLaunchTemplate
+                      - CreatePlacementGroup
+                      - RunInstances
+                      - CreateVpcPeeringConnection
+                      - CreateVpcEndpoint
+                      - CreateVpcEndpointServiceConfiguration
+              - Sid: EC2CreateTagsOnTaggedResources
+                Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+                  StringEqualsIfExists:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Sid: EC2DeleteTagsFromTaggedResources
+                Effect: Allow
+                Action:
+                  - ec2:DeleteTags
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+                  ForAllValues:StringNotEquals:
+                    "aws:TagKeys": ManagedBy
               - Action:
                   - ec2:DescribeSubnets
                   - ec2:DescribeRouteTables
@@ -117,7 +163,7 @@ Resources:
                   - ecr:ListImages
                 Condition:
                   StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
+                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
                 Resource:
                   - "*"
                 Effect: Allow
@@ -138,7 +184,7 @@ Resources:
                   - eks:DeleteAddon
                 Condition:
                   StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
+                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
@@ -148,7 +194,7 @@ Resources:
                   - eks:TagResource
                 Condition:
                   StringEquals:
-                    aws:RequestTag/ManagedBy: PingCAP
+                    aws:RequestTag/ManagedBy: !Ref RequiredManagedByTagValue
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
@@ -158,7 +204,7 @@ Resources:
                   - eks:UntagResource
                 Condition:
                   StringEquals:
-                    aws:ResourceTag/ManagedBy: PingCAP
+                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
                   ForAllValues:StringNotEquals:
                     aws:TagKeys:
                       - ManagedBy
@@ -224,41 +270,21 @@ Resources:
                 Effect: Allow
                 Resource: "*"
               - Action:
-                  - ec2:AuthorizeSecurityGroupIngress
-                  - ec2:RevokeSecurityGroupIngress
-                Effect: Allow
-                Resource: "*"
-              - Action:
                   - ec2:CreateSecurityGroup
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/ManagedBy: !Ref RequiredManagedByTagValue
                 Effect: Allow
                 Resource: "*"
-              - Action:
-                  - ec2:CreateTags
-                Condition:
-                  "Null":
-                    aws:RequestTag/elbv2.k8s.aws/cluster: "false"
-                  StringEquals:
-                    ec2:CreateAction: CreateSecurityGroup
-                Effect: Allow
-                Resource: arn:aws:ec2:*:*:security-group/*
-              - Action:
-                  - ec2:CreateTags
-                  - ec2:DeleteTags
-                Condition:
-                  "Null":
-                    aws:RequestTag/elbv2.k8s.aws/cluster: "true"
-                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
-                Effect: Allow
-                Resource: arn:aws:ec2:*:*:security-group/*
               - Action:
                   - ec2:AuthorizeSecurityGroupIngress
                   - ec2:RevokeSecurityGroupIngress
                   - ec2:DeleteSecurityGroup
                 Condition:
-                  "Null":
-                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
                 Effect: Allow
-                Resource: "*"
+                Resource: arn:aws:ec2:*:*:security-group/*
               - Action:
                   - elasticloadbalancing:CreateLoadBalancer
                   - elasticloadbalancing:CreateTargetGroup
@@ -345,22 +371,9 @@ Resources:
                 Condition:
                   StringEquals:
                     aws:ResourceTag/k8s.io/cluster-autoscaler/enabled: "true"
-                    aws:ResourceTag/ManagedBy: PingCAP
+                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
                 Effect: Allow
                 Resource: !Sub arn:aws:autoscaling:*:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/*
-        - PolicyName: EKSClusterBackupPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ec2:DescribeVolumes
-                  - ec2:DescribeSnapshots
-                  - ec2:CreateTags
-                  - ec2:CreateVolume
-                  - ec2:CreateSnapshot
-                  - ec2:DeleteSnapshot
-                Resource: "*"
         - PolicyName: DeadmanswitchPolicy
           PolicyDocument:
             Version: "2012-10-17"
