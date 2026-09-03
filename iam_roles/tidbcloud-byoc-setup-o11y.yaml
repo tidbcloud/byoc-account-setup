@@ -126,7 +126,7 @@ Resources:
                     "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
                     "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
 
-              # Existing-resource writes retain the O11Y component boundary.
+              # Existing-resource writes use the ownership tag as their boundary.
               - Effect: Allow
                 Action:
                   - eks:DeleteAddon
@@ -137,10 +137,7 @@ Resources:
                   - eks:UpdateClusterVersion
                   - eks:UpdateNodegroupConfig
                   - eks:UpdateNodegroupVersion
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
+                Resource: "*"
                 Condition:
                   StringEquals:
                     "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
@@ -160,10 +157,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - eks:UntagResource
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
+                Resource: "*"
                 Condition:
                   StringEquals:
                     "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
