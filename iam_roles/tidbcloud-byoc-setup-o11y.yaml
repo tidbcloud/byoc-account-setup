@@ -31,29 +31,42 @@ Resources:
               AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
             Action: sts:AssumeRole
       Policies:
+        # Ownership contract for mutable resources:
+        # - creation requires aws:RequestTag/ManagedBy
+        # - later writes require aws:ResourceTag/ManagedBy
+        # Service-specific exceptions remain in their owning policy.
         - PolicyName: O11yControlPlanePolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Action:
+              # EC2 resources used by O11Y control-plane provisioning.
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeLaunchTemplateVersions
+                  - ec2:DescribeRouteTables
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeVpcEndpointServiceConfigurations
+                  - ec2:DescribeVpcEndpointServicePermissions
+                  - ec2:DescribeVpcEndpointServices
+                Resource: "*"
+              - Effect: Allow
+                Action:
                   - ec2:CreateVpcEndpointServiceConfiguration
-                  - eks:CreateCluster
+                Resource: "*"
                 Condition:
                   StringEquals:
-                    aws:RequestTag/ManagedBy: !Ref RequiredManagedByTagValue
-                Effect: Allow
-                Resource: "*"
-              - Action:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Effect: Allow
+                Action:
                   - ec2:CreateRoute
                   - ec2:DeleteRoute
-                  - ec2:ModifyVpcEndpointServicePermissions
-                  - ec2:ModifyVpcEndpointServiceConfiguration
                   - ec2:DeleteVpcEndpointServiceConfigurations
+                  - ec2:ModifyVpcEndpointServiceConfiguration
+                  - ec2:ModifyVpcEndpointServicePermissions
+                Resource: "*"
                 Condition:
                   StringEquals:
-                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
-                Effect: Allow
-                Resource: "*"
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
               - Sid: EC2CreateTagsOnCreateWithRequiredTag
                 Effect: Allow
                 Action:
@@ -63,18 +76,7 @@ Resources:
                   StringEquals:
                     "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
                     "ec2:CreateAction":
-                      - CreateVpc
-                      - AllocateAddress
-                      - CreateNatGateway
-                      - CreateInternetGateway
-                      - CreateSubnet
-                      - CreateRouteTable
                       - CreateSecurityGroup
-                      - CreateLaunchTemplate
-                      - CreatePlacementGroup
-                      - RunInstances
-                      - CreateVpcPeeringConnection
-                      - CreateVpcEndpoint
                       - CreateVpcEndpointServiceConfiguration
               - Sid: EC2CreateTagsOnTaggedResources
                 Effect: Allow
@@ -96,166 +98,209 @@ Resources:
                     "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
                   ForAllValues:StringNotEquals:
                     "aws:TagKeys": ManagedBy
-              - Action:
-                  - ec2:DescribeSubnets
-                  - ec2:DescribeRouteTables
-                  - ec2:DescribeVpcEndpointServices
-                  - ec2:DescribeVpcEndpointServicePermissions
-                  - ec2:DescribeVpcEndpointServiceConfigurations
+
+              # EKS: read, create, mutate, and tag lifecycle.
+              - Effect: Allow
+                Action:
                   - eks:DescribeCluster
-                  - eks:ListClusters
-                  - eks:DescribeNodegroup
-                  - eks:ListNodegroups
                   - eks:DescribeAddon
+                  - eks:DescribeNodegroup
                   - eks:ListAddons
-                  - sts:GetCallerIdentity
-                  - ec2:DescribeLaunchTemplateVersions
-                  - ecr:GetAuthorizationToken
-                Effect: Allow
+                  - eks:ListClusters
+                  - eks:ListNodegroups
                 Resource: "*"
-              - Action:
+              - Effect: Allow
+                Action:
+                  - eks:CreateCluster
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Effect: Allow
+                Action:
+                  - eks:CreateAddon
+                  - eks:CreateNodegroup
+                Resource:
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/*
+                Condition:
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Effect: Allow
+                Action:
+                  - eks:DeleteAddon
+                  - eks:DeleteCluster
+                  - eks:DeleteNodeGroup
+                  - eks:UpdateAddon
+                  - eks:UpdateClusterConfig
+                  - eks:UpdateClusterVersion
+                  - eks:UpdateNodegroupConfig
+                  - eks:UpdateNodegroupVersion
+                Resource:
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Effect: Allow
+                Action:
+                  - eks:TagResource
+                Resource:
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
+                Condition:
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Effect: Allow
+                Action:
+                  - eks:UntagResource
+                Resource:
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
+                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+                  ForAllValues:StringNotEquals:
+                    "aws:TagKeys":
+                      - ManagedBy
+
+              # S3: bucket and object lifecycle.
+              - Effect: Allow
+                Action:
                   - s3:CreateBucket
-                Effect: Allow
                 Resource:
                   - arn:aws:s3:::*o11y*
-              - Action:
-                  - s3:ListBucket
+              - Effect: Allow
+                Action:
                   - s3:GetLifecycleConfiguration
+                  - s3:ListBucket
                   - s3:PutLifecycleConfiguration
-                Condition:
-                  StringEquals:
-                    s3:ResourceAccount: !Ref AWS::AccountId
-                Effect: Allow
                 Resource:
                   - arn:aws:s3:::*o11y*
-              - Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                  - s3:AbortMultipartUpload
-                  - s3:ListMultipartUploadParts
                 Condition:
                   StringEquals:
                     s3:ResourceAccount: !Ref AWS::AccountId
-                Effect: Allow
+              - Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:DeleteObject
+                  - s3:GetObject
+                  - s3:ListMultipartUploadParts
+                  - s3:PutObject
                 Resource:
                   - arn:aws:s3:::*o11y*/*
-              - Action:
+                Condition:
+                  StringEquals:
+                    s3:ResourceAccount: !Ref AWS::AccountId
+
+              # Supporting STS, ECR, and IAM permissions used by provisioning.
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - sts:GetCallerIdentity
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:ListImages
+                Resource:
+                  - "*"
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Effect: Allow
+                Action:
                   - iam:GetRole
                   - iam:ListAttachedRolePolicies
-                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-cluster-role
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-node-role
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
                 Resource:
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-node-role
-                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-cluster-role
-              - Action:
-                  - iam:PassRole
                 Condition:
                   StringEquals:
                     iam:PassedToService: eks.amazonaws.com
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:iam::${AWS::AccountId}:role/tidbcloud-o11y-eks-node-role
-              - Action:
-                  - ecr:BatchCheckLayerAvailability
-                  - ecr:GetDownloadUrlForLayer
-                  - ecr:BatchGetImage
-                  - ecr:DescribeImages
-                  - ecr:ListImages
-                Condition:
-                  StringEquals:
-                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
-                Resource:
-                  - "*"
-                Effect: Allow
-              - Action:
-                  - eks:CreateNodegroup
-                  - eks:CreateAddon
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-              - Action:
-                  - eks:UpdateClusterVersion
-                  - eks:UpdateClusterConfig
-                  - eks:UpdateNodegroupConfig
-                  - eks:UpdateNodegroupVersion
-                  - eks:UpdateAddon
-                  - eks:DeleteCluster
-                  - eks:DeleteNodeGroup
-                  - eks:DeleteAddon
-                Condition:
-                  StringEquals:
-                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
-              - Action:
-                  - eks:TagResource
-                Condition:
-                  StringEquals:
-                    aws:RequestTag/ManagedBy: !Ref RequiredManagedByTagValue
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
-              - Action:
-                  - eks:UntagResource
-                Condition:
-                  StringEquals:
-                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
-                  ForAllValues:StringNotEquals:
-                    aws:TagKeys:
-                      - ManagedBy
-                Effect: Allow
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/o11y-*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:addon/o11y-*/*
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:nodegroup/o11y-*/*
+
         - PolicyName: AWSLoadBalancerPolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Action:
+              # Supporting services used by AWS Load Balancer Controller.
+              - Effect: Allow
+                Action:
                   - cognito-idp:DescribeUserPoolClient
-                  - acm:ListCertificates
                   - acm:DescribeCertificate
+                  - acm:ListCertificates
                   - waf-regional:GetWebACL
                   - waf-regional:GetWebACLForResource
-                  - waf-regional:AssociateWebACL
-                  - waf-regional:DisassociateWebACL
                   - wafv2:GetWebACL
                   - wafv2:GetWebACLForResource
-                  - wafv2:AssociateWebACL
-                  - wafv2:DisassociateWebACL
-                  - shield:GetSubscriptionState
                   - shield:DescribeProtection
+                  - shield:GetSubscriptionState
+                Resource: "*"
+              - Effect: Allow
+                Action:
                   - shield:CreateProtection
                   - shield:DeleteProtection
-                Effect: Allow
+                  - waf-regional:AssociateWebACL
+                  - waf-regional:DisassociateWebACL
+                  - wafv2:AssociateWebACL
+                  - wafv2:DisassociateWebACL
                 Resource: "*"
-              - Action:
+              - Effect: Allow
+                Action:
                   - iam:CreateServiceLinkedRole
+                Resource: "*"
                 Condition:
                   StringEquals:
                     iam:AWSServiceName: elasticloadbalancing.amazonaws.com
-                Effect: Allow
-                Resource: "*"
-              - Action:
+
+              # EC2 networking and security-group lifecycle.
+              - Effect: Allow
+                Action:
                   - ec2:DescribeAccountAttributes
                   - ec2:DescribeAddresses
                   - ec2:DescribeAvailabilityZones
-                  - ec2:DescribeInternetGateways
-                  - ec2:DescribeVpcs
-                  - ec2:DescribeVpcPeeringConnections
-                  - ec2:DescribeSubnets
-                  - ec2:DescribeSecurityGroups
-                  - ec2:DescribeInstances
-                  - ec2:DescribeNetworkInterfaces
-                  - ec2:DescribeTags
-                  - ec2:GetCoipPoolUsage
                   - ec2:DescribeCoipPools
+                  - ec2:DescribeInstances
+                  - ec2:DescribeInternetGateways
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSecurityGroups
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeTags
+                  - ec2:DescribeVpcPeeringConnections
+                  - ec2:DescribeVpcs
+                  - ec2:GetCoipPoolUsage
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:CreateSecurityGroup
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Effect: Allow
+                Action:
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:DeleteSecurityGroup
+                  - ec2:RevokeSecurityGroupIngress
+                Resource: arn:aws:ec2:*:*:security-group/*
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+
+              # ELB resource lifecycle.
+              - Effect: Allow
+                Action:
                   - elasticloadbalancing:DescribeLoadBalancers
                   - elasticloadbalancing:DescribeLoadBalancerAttributes
                   - elasticloadbalancing:DescribeListeners
@@ -267,113 +312,143 @@ Resources:
                   - elasticloadbalancing:DescribeTargetGroupAttributes
                   - elasticloadbalancing:DescribeTargetHealth
                   - elasticloadbalancing:DescribeTags
-                Effect: Allow
                 Resource: "*"
-              - Action:
-                  - ec2:CreateSecurityGroup
-                Condition:
-                  StringEquals:
-                    aws:RequestTag/ManagedBy: !Ref RequiredManagedByTagValue
-                Effect: Allow
-                Resource: "*"
-              - Action:
-                  - ec2:AuthorizeSecurityGroupIngress
-                  - ec2:RevokeSecurityGroupIngress
-                  - ec2:DeleteSecurityGroup
-                Condition:
-                  StringEquals:
-                    aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
-                Effect: Allow
-                Resource: arn:aws:ec2:*:*:security-group/*
-              - Action:
+              - Effect: Allow
+                Action:
                   - elasticloadbalancing:CreateLoadBalancer
                   - elasticloadbalancing:CreateTargetGroup
+                Resource: "*"
                 Condition:
                   "Null":
                     aws:RequestTag/elbv2.k8s.aws/cluster: "false"
-                Effect: Allow
-                Resource: "*"
-              - Action:
+              - Effect: Allow
+                Action:
+                  - elasticloadbalancing:AddListenerCertificates
                   - elasticloadbalancing:CreateListener
-                  - elasticloadbalancing:DeleteListener
                   - elasticloadbalancing:CreateRule
+                  - elasticloadbalancing:DeleteListener
                   - elasticloadbalancing:DeleteRule
-                Effect: Allow
+                  - elasticloadbalancing:ModifyListener
+                  - elasticloadbalancing:ModifyRule
+                  - elasticloadbalancing:RemoveListenerCertificates
+                  - elasticloadbalancing:SetRulePriorities
+                  - elasticloadbalancing:SetWebAcl
                 Resource: "*"
-              - Action:
+              - Effect: Allow
+                Action:
                   - elasticloadbalancing:AddTags
                   - elasticloadbalancing:RemoveTags
-                Condition:
-                  "Null":
-                    aws:RequestTag/elbv2.k8s.aws/cluster: "true"
-                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
-                Effect: Allow
                 Resource:
-                  - arn:aws:elasticloadbalancing:*:*:targetgroup/*/*
-                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*
-                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*
-              - Action:
-                  - elasticloadbalancing:AddTags
-                  - elasticloadbalancing:RemoveTags
-                Condition:
-                  "Null":
-                    aws:RequestTag/elbv2.k8s.aws/cluster: "true"
-                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
-                Effect: Allow
-                Resource:
-                  - arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*
                   - arn:aws:elasticloadbalancing:*:*:listener/app/*/*/*
-                  - arn:aws:elasticloadbalancing:*:*:listener-rule/net/*/*/*
+                  - arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*
                   - arn:aws:elasticloadbalancing:*:*:listener-rule/app/*/*/*
-              - Action:
+                  - arn:aws:elasticloadbalancing:*:*:listener-rule/net/*/*/*
+                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*
+                  - arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*
+                  - arn:aws:elasticloadbalancing:*:*:targetgroup/*/*
+                Condition:
+                  "Null":
+                    aws:RequestTag/elbv2.k8s.aws/cluster: "true"
+                    aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
+              - Effect: Allow
+                Action:
+                  - elasticloadbalancing:DeleteLoadBalancer
+                  - elasticloadbalancing:DeleteTargetGroup
                   - elasticloadbalancing:ModifyLoadBalancerAttributes
+                  - elasticloadbalancing:ModifyTargetGroup
+                  - elasticloadbalancing:ModifyTargetGroupAttributes
                   - elasticloadbalancing:SetIpAddressType
                   - elasticloadbalancing:SetSecurityGroups
                   - elasticloadbalancing:SetSubnets
-                  - elasticloadbalancing:DeleteLoadBalancer
-                  - elasticloadbalancing:ModifyTargetGroup
-                  - elasticloadbalancing:ModifyTargetGroupAttributes
-                  - elasticloadbalancing:DeleteTargetGroup
+                Resource: "*"
                 Condition:
                   "Null":
                     aws:ResourceTag/elbv2.k8s.aws/cluster: "false"
-                Effect: Allow
-                Resource: "*"
-              - Action:
+              - Effect: Allow
+                Action:
                   - elasticloadbalancing:RegisterTargets
                   - elasticloadbalancing:DeregisterTargets
-                Effect: Allow
                 Resource: arn:aws:elasticloadbalancing:*:*:targetgroup/*/*
-              - Action:
-                  - elasticloadbalancing:SetWebAcl
-                  - elasticloadbalancing:ModifyListener
-                  - elasticloadbalancing:AddListenerCertificates
-                  - elasticloadbalancing:RemoveListenerCertificates
-                  - elasticloadbalancing:ModifyRule
-                  - elasticloadbalancing:SetRulePriorities
-                Effect: Allow
-                Resource: "*"
+
         - PolicyName: ClusterAutoscalerPolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Action:
+              - Effect: Allow
+                Action:
                   - autoscaling:DescribeAutoScalingGroups
                   - autoscaling:DescribeAutoScalingInstances
                   - autoscaling:DescribeLaunchConfigurations
                   - autoscaling:DescribeTags
                   - ec2:DescribeLaunchTemplateVersions
-                Effect: Allow
                 Resource: "*"
-              - Action:
+              - Effect: Allow
+                Action:
                   - autoscaling:SetDesiredCapacity
                   - autoscaling:TerminateInstanceInAutoScalingGroup
+                Resource: !Sub arn:aws:autoscaling:*:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/*
                 Condition:
                   StringEquals:
                     aws:ResourceTag/k8s.io/cluster-autoscaler/enabled: "true"
                     aws:ResourceTag/ManagedBy: !Ref RequiredManagedByTagValue
+
+        - PolicyName: EKSClusterBackupPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: BackupRead
                 Effect: Allow
-                Resource: !Sub arn:aws:autoscaling:*:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/*
+                Action:
+                  - ec2:DescribeSnapshots
+                  - ec2:DescribeVolumes
+                Resource: "*"
+
+              # Source resources are read by the create APIs, not mutated.
+              - Sid: BackupSnapshotVolumes
+                Effect: Allow
+                Action:
+                  - ec2:CreateSnapshot
+                Resource: !Sub arn:aws:ec2:*:${AWS::AccountId}:volume/*
+              - Sid: BackupRestoreSnapshots
+                Effect: Allow
+                Action:
+                  - ec2:CreateVolume
+                Resource: arn:aws:ec2:*:*:snapshot/*
+
+              # New backup resources must carry the ownership tag.
+              - Sid: BackupCreateTagged
+                Effect: Allow
+                Action:
+                  - ec2:CreateSnapshot
+                  - ec2:CreateVolume
+                Resource:
+                  - arn:aws:ec2:*:*:snapshot/*
+                  - !Sub arn:aws:ec2:*:${AWS::AccountId}:volume/*
+                Condition:
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Sid: BackupTagOnCreate
+                Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                Resource:
+                  - arn:aws:ec2:*:*:snapshot/*
+                  - !Sub arn:aws:ec2:*:${AWS::AccountId}:volume/*
+                Condition:
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+                    "ec2:CreateAction":
+                      - CreateSnapshot
+                      - CreateVolume
+              - Sid: BackupDeleteTagged
+                Effect: Allow
+                Action:
+                  - ec2:DeleteSnapshot
+                Resource: arn:aws:ec2:*:*:snapshot/*
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+
         - PolicyName: DeadmanswitchPolicy
           PolicyDocument:
             Version: "2012-10-17"
