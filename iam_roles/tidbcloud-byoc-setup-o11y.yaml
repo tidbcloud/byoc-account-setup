@@ -116,16 +116,20 @@ Resources:
                 Condition:
                   StringEquals:
                     "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+
+              # Child creation is authorized against the existing parent cluster.
+              # Require ownership of both the parent and the new child resource.
               - Effect: Allow
                 Action:
                   - eks:CreateAddon
                   - eks:CreateNodegroup
-                Resource:
-                  - !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/*
+                Resource: !Sub arn:aws:eks:*:${AWS::AccountId}:cluster/*
                 Condition:
                   StringEquals:
                     "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
                     "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+
+              # Existing-resource writes retain the O11Y component boundary.
               - Effect: Allow
                 Action:
                   - eks:DeleteAddon
@@ -143,6 +147,9 @@ Resources:
                 Condition:
                   StringEquals:
                     "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
+
+              # RequestTag constrains the tags being written; the ARN prefix
+              # constrains which existing component resources can be claimed.
               - Effect: Allow
                 Action:
                   - eks:TagResource
