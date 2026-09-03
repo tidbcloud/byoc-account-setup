@@ -412,24 +412,34 @@ Resources:
                   - ec2:DescribeVolumes
                 Resource: "*"
 
-              # Source resources are read by the create APIs, not mutated.
+              # Backup and restore can only read from managed source resources.
               - Effect: Allow
                 Action:
                   - ec2:CreateSnapshot
                 Resource: !Sub arn:aws:ec2:*:${AWS::AccountId}:volume/*
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
               - Effect: Allow
                 Action:
                   - ec2:CreateVolume
                 Resource: arn:aws:ec2:*:*:snapshot/*
+                Condition:
+                  StringEquals:
+                    "aws:ResourceTag/ManagedBy": !Ref RequiredManagedByTagValue
 
               # New backup resources must carry the ownership tag.
               - Effect: Allow
                 Action:
                   - ec2:CreateSnapshot
+                Resource: arn:aws:ec2:*:*:snapshot/*
+                Condition:
+                  StringEquals:
+                    "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
+              - Effect: Allow
+                Action:
                   - ec2:CreateVolume
-                Resource:
-                  - arn:aws:ec2:*:*:snapshot/*
-                  - !Sub arn:aws:ec2:*:${AWS::AccountId}:volume/*
+                Resource: !Sub arn:aws:ec2:*:${AWS::AccountId}:volume/*
                 Condition:
                   StringEquals:
                     "aws:RequestTag/ManagedBy": !Ref RequiredManagedByTagValue
