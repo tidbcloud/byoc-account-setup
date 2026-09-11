@@ -13,8 +13,6 @@ Options:
                                      (full ARNs, e.g. arn:aws:acm-pca:us-east-1:ACCOUNT:certificate-authority/ID)
   --additional-tidb-hz-ids <ids>     Comma-separated additional TiDB hosted zone IDs for multi-region
                                      (e.g. Z111AAA,Z222BBB)
-  --additional-o11y-hz-ids <ids>     Comma-separated additional o11y hosted zone IDs for multi-region
-                                     (e.g. Z111AAA,Z222BBB)
   --enable-external-dns-node-role-policy <true|false>
                                      Whether to enable Route53 permissions for external-dns on EKS node role.
                                      Only applies when updating 'dataplane' or 'all'.
@@ -29,7 +27,6 @@ EOF
 STACK=""
 AdditionalPCAArns=""
 AdditionalTidbHostedZoneIds=""
-AdditionalO11yHostedZoneIds=""
 EnableExternalDNSNodeRolePolicy=""
 
 require_arg() {
@@ -63,9 +60,6 @@ while [[ $# -gt 0 ]]; do
     --additional-tidb-hz-ids)
       require_arg "$@"
       AdditionalTidbHostedZoneIds="${2// /}"; shift 2 ;;
-    --additional-o11y-hz-ids)
-      require_arg "$@"
-      AdditionalO11yHostedZoneIds="${2// /}"; shift 2 ;;
     --enable-external-dns-node-role-policy)
       require_arg "$@"
       EnableExternalDNSNodeRolePolicy="$2"; shift 2 ;;
@@ -144,11 +138,6 @@ update_stack() {
   echo "Stack ${stack_name} updated successfully (or no changes were necessary)."
 }
 
-deploy_overrides=""
-if [[ -n "$AdditionalO11yHostedZoneIds" ]]; then
-  deploy_overrides="AdditionalO11yHostedZoneIds=$(hz_ids_to_arns "$AdditionalO11yHostedZoneIds")"
-fi
-
 dataplane_excluded_parameter_keys=""
 dataplane_overrides="ResourceNamePrefix=tidbcloud RequiredManagedByTagValue=PingCAP SLIBucketNamePrefix=tidbcloud-sli-data"
 [[ -n "$AdditionalPCAArns" ]] && dataplane_overrides="$dataplane_overrides AdditionalPCAArns=$AdditionalPCAArns"
@@ -160,25 +149,24 @@ if [[ -n "$EnableExternalDNSNodeRolePolicy" ]]; then
   dataplane_excluded_parameter_keys="EnableExternalDNSNodeRolePolicy"
 fi
 
-o11y_overrides=""
-if [[ -n "$AdditionalO11yHostedZoneIds" ]]; then
-  o11y_overrides="AdditionalO11yHostedZoneIds=$(hz_ids_to_arns "$AdditionalO11yHostedZoneIds")"
-fi
+# Existing stacks may still store these removed template parameters. Exclude
+# them while carrying forward every parameter that remains in the templates.
+removed_o11y_dns_parameter_keys="O11yHostedZoneId,AdditionalO11yHostedZoneIds"
 
 case "$STACK" in
   deploy)
-    update_stack "tidbcloud-byoc-setup-deploy" "./tidbcloud-byoc-setup-deploy.yaml" "$deploy_overrides"
+    update_stack "tidbcloud-byoc-setup-deploy" "./tidbcloud-byoc-setup-deploy.yaml" "" "$removed_o11y_dns_parameter_keys"
     ;;
   dataplane)
     update_stack "tidbcloud-byoc-setup-dataplane" "./tidbcloud-byoc-setup-dataplane.yaml" "$dataplane_overrides" "$dataplane_excluded_parameter_keys"
     ;;
   o11y)
-    update_stack "tidbcloud-byoc-setup-o11y" "./tidbcloud-byoc-setup-o11y.yaml" "$o11y_overrides"
+    update_stack "tidbcloud-byoc-setup-o11y" "./tidbcloud-byoc-setup-o11y.yaml" "" "$removed_o11y_dns_parameter_keys"
     ;;
   all)
-    update_stack "tidbcloud-byoc-setup-deploy" "./tidbcloud-byoc-setup-deploy.yaml" "$deploy_overrides"
+    update_stack "tidbcloud-byoc-setup-deploy" "./tidbcloud-byoc-setup-deploy.yaml" "" "$removed_o11y_dns_parameter_keys"
     update_stack "tidbcloud-byoc-setup-dataplane" "./tidbcloud-byoc-setup-dataplane.yaml" "$dataplane_overrides" "$dataplane_excluded_parameter_keys"
-    update_stack "tidbcloud-byoc-setup-o11y" "./tidbcloud-byoc-setup-o11y.yaml" "$o11y_overrides"
+    update_stack "tidbcloud-byoc-setup-o11y" "./tidbcloud-byoc-setup-o11y.yaml" "" "$removed_o11y_dns_parameter_keys"
     ;;
   *)
     echo "Error: unknown stack '$STACK'. Must be one of: deploy, dataplane, o11y, all"
